@@ -31,7 +31,7 @@ public class RobotContainer {
     // Set default command
     m_SwerveSubsystem.setDefaultCommand(driveFieldOrientedDirectAngle);
 
-    configureBindings();
+  /*  configureBindings();
   }
 
   private void configureBindings() {
@@ -41,6 +41,6 @@ public class RobotContainer {
   }
 
   public void teleopSequence() {
-    SmartDashboard.putData("Commands", CommandScheduler.getInstance());
+    SmartDashboard.putData("Commands", CommandScheduler.getInstance());*/
   }
 }
