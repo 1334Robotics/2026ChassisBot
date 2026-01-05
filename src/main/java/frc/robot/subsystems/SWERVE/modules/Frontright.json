@@ -1,0 +1,14 @@
+{
+  "driveMotorID": 4,
+  "angleMotorID": 5,
+  "encoderID": 6,
+
+  "angleOffset": 0.0,
+
+  "xPositionMeters": 0.381,
+  "yPositionMeters": -0.381,
+
+  "driveMotorInverted": false,
+  "angleMotorInverted": false,
+  "encoderInverted": false
+}
