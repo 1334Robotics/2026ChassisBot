@@ -20,7 +20,7 @@ public class Robot extends TimedRobot {
   @Override
   public void robotPeriodic() {
     CommandScheduler.getInstance().run();
-    m_robotContainer.teleopSequence();
+   // m_robotContainer.teleopSequence();
   }
 
   @Override
@@ -31,7 +31,7 @@ public class Robot extends TimedRobot {
 
   @Override
   public void disabledExit() {}
-  
+
   @Override
   public void teleopInit() {
     if (m_autonomousCommand != null) {
