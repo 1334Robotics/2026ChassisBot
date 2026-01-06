@@ -54,6 +54,10 @@ public class SwerveSubsystem extends SubsystemBase {
         });
     }
 
+    public Pose2d getPose() {
+        return swerveDrive.getPose();
+    }
+
     public void seedForwards() {
         var pose = swerveDrive.getPose();
         swerveDrive.resetOdometry(new Pose2d(pose.getX(), pose.getY(), Rotation2d.kZero));
