@@ -4,7 +4,8 @@ import java.io.File;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.Filesystem;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+//import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -31,16 +32,16 @@ public class RobotContainer {
     // Set default command
     m_SwerveSubsystem.setDefaultCommand(driveFieldOrientedDirectAngle);
 
-  /*  configureBindings();
+   configureBindings();
   }
 
   private void configureBindings() {
     // e.g., driverXbox.a().onTrue(Commands.print("A pressed"));
-    driverXbox.povDown().onTrue(Commands.runOnce(() -> m_SwerveSubsystem.seedForwards()));
+    driverXbox.povDown().onTrue(Commands.runOnce(() -> m_SwerveSubsystem.seedForwards(), m_SwerveSubsystem));
     driverXbox.a().whileTrue(m_SwerveSubsystem.driveCommand(() -> 0.1, () -> 0.0, () -> 0.0, () -> 0.0));
   }
 
   public void teleopSequence() {
-    SmartDashboard.putData("Commands", CommandScheduler.getInstance());*/
+    Shuffleboard.getTab("Diagnostics").add("Command Scheduler", CommandScheduler.getInstance());
   }
 }
