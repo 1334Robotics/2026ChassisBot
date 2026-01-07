@@ -15,21 +15,48 @@ import swervelib.telemetry.SwerveDriveTelemetry;
 import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
 import swervelib.math.SwerveMath;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 
 
 public class SwerveSubsystem extends SubsystemBase {
     private final SwerveDrive swerveDrive;
+    private final Field2d field = new Field2d();
+    private static final double FIELD_WIDTH_M = 8.23;
+    private static final double FIELD_LENGTH_M = 16.46;
+    private static final double FIELD_PADDING_M = 0.05;
 
     public SwerveSubsystem(File directory) {
         try {
             this.swerveDrive = new SwerveParser(directory).createSwerveDrive(5);
+            // Ensure robot spawns on the field in simulation (meters).
+            // Pick coordinates inside the 27ft x 54ft field (≈ 8.23m x 16.46m) e.g. (1,1)
+            this.swerveDrive.resetOdometry(new Pose2d(1.0, 1.0, Rotation2d.fromDegrees(0)));
         } catch (Exception e) {
             throw new java.lang.RuntimeException(e);
         }
         SwerveDriveTelemetry.verbosity = TelemetryVerbosity.HIGH;
+        SmartDashboard.putData("Field", field);
     }
 
+    @Override
+    public void periodic() {
+        Pose2d pose = swerveDrive.getPose();
+        field.setRobotPose(pose);
+        SmartDashboard.putNumber("Swerve/Pose X", pose.getX());
+        SmartDashboard.putNumber("Swerve/Pose Y", pose.getY());
+        SmartDashboard.putNumber("Swerve/Heading", pose.getRotation().getDegrees());
+        clampPoseIfOutOfBounds(pose);
+    }
 
+    private void clampPoseIfOutOfBounds(Pose2d pose) {
+        double x = MathUtil.clamp(pose.getX(), FIELD_PADDING_M, FIELD_LENGTH_M - FIELD_PADDING_M);
+        double y = MathUtil.clamp(pose.getY(), FIELD_PADDING_M, FIELD_WIDTH_M - FIELD_PADDING_M);
+        if (x != pose.getX() || y != pose.getY()) {
+            swerveDrive.resetOdometry(new Pose2d(x, y, pose.getRotation()));
+            SmartDashboard.putString("Swerve/Clamp", "Clamped pose to field bounds");
+        }
+    }
 
     public Command driveCommand(DoubleSupplier translationX, DoubleSupplier translationY, DoubleSupplier headingX, DoubleSupplier headingY) {
         return run(() -> {
