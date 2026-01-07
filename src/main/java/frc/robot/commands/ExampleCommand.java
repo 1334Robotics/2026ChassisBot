@@ -10,7 +10,6 @@ import frc.robot.subsystems.drive.SwerveSubsystem;
 /** An example command that uses an example subsystem. */
 public class ExampleCommand extends Command {
   @SuppressWarnings({"PMD.UnusedPrivateField", "PMD.SingularField"})
-  private final SwerveSubsystem m_subsystem;
 
   /**
    * Creates a new ExampleCommand.
@@ -18,8 +17,6 @@ public class ExampleCommand extends Command {
    * @param subsystem The subsystem used by this command.
    */
   public ExampleCommand(SwerveSubsystem subsystem) {
-    m_subsystem = subsystem;
-    // Use addRequirements() here to declare subsystem dependencies.
     addRequirements(subsystem);
   }
 
