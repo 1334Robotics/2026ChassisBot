@@ -4,11 +4,14 @@
 
 package frc.robot;
 
-import frc.robot.Constants.OperatorConstants;
 import frc.robot.commands.Autos;
-import frc.robot.commands.ExampleCommand;
 import frc.robot.subsystems.drive.SwerveSubsystem;
+
+import java.io.File;
+
+import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 
@@ -20,13 +23,14 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  private final SwerveSubsystem m_SwerveSubsystem = new SwerveSubsystem(null);
+  private final SwerveSubsystem m_SwerveSubsystem;
   // Replace with CommandPS4Controller or CommandJoystick if needed
-  private final CommandXboxController m_driverController =
-      new CommandXboxController(OperatorConstants.kDriverControllerPort);
+  private final CommandXboxController m_driverController;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
+    m_SwerveSubsystem = new SwerveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve"));
+    m_driverController = new CommandXboxController(0);
     // Configure the trigger bindings
     configureBindings();
   }
@@ -42,8 +46,7 @@ public class RobotContainer {
    */
   private void configureBindings() {
     // Schedule `ExampleCommand` when `exampleCondition` changes to `true`
-    new Trigger(m_SwerveSubsystem::exampleCondition)
-        .onTrue(new ExampleCommand(m_SwerveSubsystem));
+    m_driverController.povDown().onTrue(Commands.runOnce(() -> m_SwerveSubsystem.seedForwards()));
 
     // Schedule `exampleMethodCommand` when the Xbox controller's B button is pressed,
     // cancelling on release.
@@ -51,7 +54,7 @@ public class RobotContainer {
         () -> m_driverController.getLeftY(),
         () -> m_driverController.getLeftX(),
         () -> m_driverController.getRightX(),
-        () -> m_driverController.getRightTriggerAxis()
+        () -> m_driverController.getRightY()
     ));
   }
 
