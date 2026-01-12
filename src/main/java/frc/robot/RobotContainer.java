@@ -16,7 +16,7 @@ public class RobotContainer {
 
   private final DriveSubsystem m_DriveSubsystem;
   private final CommandXboxController driverXbox;
-  private final Command driveFieldOrientedDirectAngle;
+  private Command driveFieldOrientedDirectAngle;
 
   public RobotContainer() {
 
@@ -26,7 +26,7 @@ public class RobotContainer {
         new DriveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve"));
 
     // Default drive command
-    driveFieldOrientedDirectAngle =
+    driveFieldOrientedDirectAngle = 
         m_DriveSubsystem.driveCommand(
             () -> MathUtil.applyDeadband(driverXbox.getLeftY(), 0.1),
             () -> MathUtil.applyDeadband(driverXbox.getLeftX(), 0.1),
