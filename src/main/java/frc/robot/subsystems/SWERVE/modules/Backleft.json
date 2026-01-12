@@ -1,14 +1,27 @@
 {
-  "driveMotorID": 7,
-  "angleMotorID": 8,
-  "encoderID": 9,
-
-  "angleOffset": 0.0,
-
-  "xPositionMeters": -0.381,
-  "yPositionMeters": 0.381,
-
-  "driveMotorInverted": false,
-  "angleMotorInverted": false,
-  "encoderInverted": false
+  "location": {
+    "front": -11.125,
+    "left": 11.125
+  },
+  "absoluteEncoderOffset": 128.5,
+  "drive": {
+    "type": "sparkmax_neo",
+    "id": 7,
+    "canbus": null
+  },
+  "angle": {
+    "type": "sparkmax_neo",
+    "id": 8,
+    "canbus": null
+  },
+  "encoder": {
+    "type": "cancoder",
+    "id": 10,
+    "canbus": null
+  },
+  "inverted": {
+    "drive": false,
+    "angle": true
+  },
+  "absoluteEncoderInverted": false
 }
