@@ -23,7 +23,7 @@ public class RobotContainer {
     driverXbox = new CommandXboxController(0);
 
     m_DriveSubsystem =
-        new DriveSubsystem(new File(Filesystem.getDeployDirectory(), "swerve"));
+        new DriveSubsystem(new File(Filesystem.getDeployDirectory(), "SWERVE"));
 
     // Default drive command
     driveFieldOrientedDirectAngle = 
