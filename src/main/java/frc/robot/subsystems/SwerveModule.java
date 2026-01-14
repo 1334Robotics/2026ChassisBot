@@ -1,4 +1,4 @@
-package frc.robot.subsystems.src.main.java.frc.robot.subsystems;
+package frc.robot.subsystems;
 
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -20,7 +20,7 @@ public class SwerveModule {
     private final SparkAbsoluteEncoder turningEncoder;
     private final PIDController turningPIDController;
 
-    public SwerveModule(int driveMotorId, int turningMotorId) {
+    private SwerveModule(int driveMotorId, int turningMotorId) {
 
         driveMotor = new SparkMax(driveMotorId, MotorType.kBrushless);
         turningMotor = new SparkMax(turningMotorId, MotorType.kBrushless);
