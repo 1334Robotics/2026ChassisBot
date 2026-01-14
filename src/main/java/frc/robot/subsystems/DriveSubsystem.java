@@ -23,6 +23,11 @@ public class DriveSubsystem extends SubsystemBase
     private static final double MAX_SPEED_MPS = 3.0; // meters per second
     private static final double MAX_ANGULAR_VELOCITY = Math.PI; // radians per second (180 deg/s)
     
+    // Track current speeds for dashboard
+    private double currentXSpeed = 0.0;
+    private double currentYSpeed = 0.0;
+    private double currentRotSpeed = 0.0;
+    
     public DriveSubsystem(File directory) {
         try {
             File swerveJsonDirectory = new File(Filesystem.getDeployDirectory(), "SWERVE");
@@ -34,6 +39,10 @@ public class DriveSubsystem extends SubsystemBase
         // Initialize Field2d for visualization
         field2d = new Field2d();
         SmartDashboard.putData("Field", field2d);
+        
+        // Put initial values on dashboard
+        SmartDashboard.putNumber("Drive/Max Speed (m/s)", MAX_SPEED_MPS);
+        SmartDashboard.putNumber("Drive/Max Angular Velocity (rad/s)", MAX_ANGULAR_VELOCITY);
     }
     
     /**
@@ -55,12 +64,12 @@ public class DriveSubsystem extends SubsystemBase
             double rotInput = rotationX.getAsDouble();
             
             // Convert to velocities (m/s and rad/s)
-            double xVelocity = xInput * MAX_SPEED_MPS;
-            double yVelocity = yInput * MAX_SPEED_MPS;
-            double rotVelocity = rotInput * MAX_ANGULAR_VELOCITY;
+            currentXSpeed = xInput * MAX_SPEED_MPS;
+            currentYSpeed = yInput * MAX_SPEED_MPS;
+            currentRotSpeed = rotInput * MAX_ANGULAR_VELOCITY;
             
             // Create chassis speeds and drive
-            ChassisSpeeds speeds = new ChassisSpeeds(xVelocity, yVelocity, rotVelocity);
+            ChassisSpeeds speeds = new ChassisSpeeds(currentXSpeed, currentYSpeed, currentRotSpeed);
             swerveDrive.driveFieldOriented(speeds);
         });
     }
@@ -69,7 +78,11 @@ public class DriveSubsystem extends SubsystemBase
      * Stop the robot completely.
      */
     public void stop() {
-        swerveDrive.drive(new ChassisSpeeds(0, 0, 0));
+        currentXSpeed = 0.0;
+        currentYSpeed = 0.0;
+        currentRotSpeed = 0.0;
+        swerveDrive.driveFieldOriented(new ChassisSpeeds(0, 0, 0));
+        SmartDashboard.putString("Drive/Status", "Stopped");
     }
 
     /**
@@ -77,11 +90,13 @@ public class DriveSubsystem extends SubsystemBase
      */
     public void lock() {
         swerveDrive.lockPose();
+        SmartDashboard.putBoolean("Drive/Locked", true);
     }
 
     public void seedForwards() {
         var pose = swerveDrive.getPose();
         swerveDrive.resetOdometry(new Pose2d(pose.getX(), pose.getY(), Rotation2d.kZero));
+        SmartDashboard.putBoolean("Drive/Heading Reset", true);
     }
     
     /**
@@ -109,6 +124,8 @@ public class DriveSubsystem extends SubsystemBase
      */
     public void resetOdometry(Pose2d pose) {
         swerveDrive.resetOdometry(pose);
+        SmartDashboard.putString("Drive/Last Reset Pose", 
+            String.format("(%.2f, %.2f) @ %.1f°", pose.getX(), pose.getY(), pose.getRotation().getDegrees()));
     }
 
     /**
@@ -132,19 +149,31 @@ public class DriveSubsystem extends SubsystemBase
 
     @Override 
     public void periodic() {
-        SmartDashboard.putNumber("Adjusted Front Left", swerveDrive.getModules()[0].getAbsolutePosition());
-        SmartDashboard.putNumber("Adjusted Front Right", swerveDrive.getModules()[1].getAbsolutePosition());
-        SmartDashboard.putNumber("Adjusted Back Left", swerveDrive.getModules()[2].getAbsolutePosition());
-        SmartDashboard.putNumber("Adjusted Back Right", swerveDrive.getModules()[3].getAbsolutePosition());
-        SmartDashboard.putNumber("heading", swerveDrive.getOdometryHeading().getDegrees());
-        
         // Update Field2d with current robot pose
-        field2d.setRobotPose(swerveDrive.getPose());
-        
-        // Additional pose data to dashboard
         Pose2d pose = swerveDrive.getPose();
-        SmartDashboard.putNumber("Robot X", pose.getX());
-        SmartDashboard.putNumber("Robot Y", pose.getY());
-        SmartDashboard.putNumber("Robot Rotation", pose.getRotation().getDegrees());
+        field2d.setRobotPose(pose);
+        
+        // ==================== POSE DATA ====================
+        SmartDashboard.putNumber("Drive/Pose X (m)", pose.getX());
+        SmartDashboard.putNumber("Drive/Pose Y (m)", pose.getY());
+        SmartDashboard.putNumber("Drive/Pose Rotation (deg)", pose.getRotation().getDegrees());
+        SmartDashboard.putNumber("Drive/Heading (deg)", swerveDrive.getOdometryHeading().getDegrees());
+        
+        // ==================== VELOCITY DATA ====================
+        SmartDashboard.putNumber("Drive/X Velocity (m/s)", currentXSpeed);
+        SmartDashboard.putNumber("Drive/Y Velocity (m/s)", currentYSpeed);
+        SmartDashboard.putNumber("Drive/Rotation Velocity (rad/s)", currentRotSpeed);
+        SmartDashboard.putNumber("Drive/Total Speed (m/s)", 
+            Math.sqrt(currentXSpeed * currentXSpeed + currentYSpeed * currentYSpeed));
+        
+        // ==================== MODULE DATA ====================
+        SmartDashboard.putNumber("Swerve/FL Angle", swerveDrive.getModules()[0].getAbsolutePosition());
+        SmartDashboard.putNumber("Swerve/FR Angle", swerveDrive.getModules()[1].getAbsolutePosition());
+        SmartDashboard.putNumber("Swerve/BL Angle", swerveDrive.getModules()[2].getAbsolutePosition());
+        SmartDashboard.putNumber("Swerve/BR Angle", swerveDrive.getModules()[3].getAbsolutePosition());
+        
+        // ==================== STATUS ====================
+        SmartDashboard.putBoolean("Drive/Locked", false);
+        SmartDashboard.putBoolean("Drive/Heading Reset", false);
     }
 }

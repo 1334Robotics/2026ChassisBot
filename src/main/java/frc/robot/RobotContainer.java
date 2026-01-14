@@ -48,6 +48,31 @@ public class RobotContainer {
 
     configureDefaultCommand();
     configureBindings();
+    
+    // ==================== SMARTDASHBOARD SETUP ====================
+    setupSmartDashboard();
+  }
+
+  private void setupSmartDashboard() {
+    // Put command scheduler on dashboard
+    SmartDashboard.putData("Commands", CommandScheduler.getInstance());
+    
+    // Controller info
+    SmartDashboard.putNumber("Controller/Deadband", DEADBAND);
+    SmartDashboard.putNumber("Controller/Normal Speed %", 50);
+    SmartDashboard.putNumber("Controller/Full Speed %", 100);
+    SmartDashboard.putNumber("Controller/Precision Speed %", 20);
+    
+    // Control instructions
+    SmartDashboard.putString("Controls/Left Stick", "Move Robot");
+    SmartDashboard.putString("Controls/Right Stick X", "Rotate Robot");
+    SmartDashboard.putString("Controls/Right Trigger", "Full Speed Mode");
+    SmartDashboard.putString("Controls/Left Trigger", "Precision Mode");
+    SmartDashboard.putString("Controls/A Button", "Test Auto");
+    SmartDashboard.putString("Controls/B Button", "Reset to Blue Start");
+    SmartDashboard.putString("Controls/X Button", "Reset to Red Start");
+    SmartDashboard.putString("Controls/Y Button", "Reset to Center");
+    SmartDashboard.putString("Controls/POV Down", "Reset Heading");
   }
 
   private void configureAutoChooser() {
@@ -71,12 +96,27 @@ public class RobotContainer {
   // ==================== DEFAULT COMMAND ====================
 
   private void configureDefaultCommand() {
-    // Simple default drive command
+    // Simple default drive command with dashboard updates
     m_DriveSubsystem.setDefaultCommand(
       m_DriveSubsystem.driveCommand(
-        () -> MathUtil.applyDeadband(driverXbox.getLeftY(), DEADBAND) * 0.5,
-        () -> MathUtil.applyDeadband(driverXbox.getLeftX(), DEADBAND) * 0.5,
-        () -> MathUtil.applyDeadband(driverXbox.getRightX(), DEADBAND) * 0.3,
+        () -> {
+          double input = MathUtil.applyDeadband(driverXbox.getLeftY(), DEADBAND) * 0.5;
+          SmartDashboard.putNumber("Controller/Left Y", driverXbox.getLeftY());
+          SmartDashboard.putNumber("Controller/Left Y (processed)", input);
+          return input;
+        },
+        () -> {
+          double input = MathUtil.applyDeadband(driverXbox.getLeftX(), DEADBAND) * 0.5;
+          SmartDashboard.putNumber("Controller/Left X", driverXbox.getLeftX());
+          SmartDashboard.putNumber("Controller/Left X (processed)", input);
+          return input;
+        },
+        () -> {
+          double input = MathUtil.applyDeadband(driverXbox.getRightX(), DEADBAND) * 0.3;
+          SmartDashboard.putNumber("Controller/Right X", driverXbox.getRightX());
+          SmartDashboard.putNumber("Controller/Right X (processed)", input);
+          return input;
+        },
         () -> 0.0
       )
     );
@@ -87,25 +127,36 @@ public class RobotContainer {
   private void configureBindings() {
     // POV Down: Reset heading
     driverXbox.povDown()
-        .onTrue(Commands.runOnce(() -> m_DriveSubsystem.seedForwards()));
+        .onTrue(Commands.runOnce(() -> {
+            m_DriveSubsystem.seedForwards();
+            SmartDashboard.putString("Status/Last Action", "Heading Reset");
+        }));
 
     // B button: Reset to blue start
     driverXbox.b()
-        .onTrue(Commands.runOnce(() -> 
-            m_DriveSubsystem.resetOdometry(Constants.FieldConstants.BLUE_ALLIANCE_START)));
+        .onTrue(Commands.runOnce(() -> {
+            m_DriveSubsystem.resetOdometry(Constants.FieldConstants.BLUE_ALLIANCE_START);
+            SmartDashboard.putString("Status/Last Action", "Reset to Blue Start");
+        }));
     
     // X button: Reset to red start
     driverXbox.x()
-        .onTrue(Commands.runOnce(() -> 
-            m_DriveSubsystem.resetOdometry(Constants.FieldConstants.RED_ALLIANCE_START)));
+        .onTrue(Commands.runOnce(() -> {
+            m_DriveSubsystem.resetOdometry(Constants.FieldConstants.RED_ALLIANCE_START);
+            SmartDashboard.putString("Status/Last Action", "Reset to Red Start");
+        }));
     
     // Y button: Reset to center
     driverXbox.y()
-        .onTrue(Commands.runOnce(() -> 
-            m_DriveSubsystem.resetOdometry(Constants.FieldConstants.CENTER_START)));
+        .onTrue(Commands.runOnce(() -> {
+            m_DriveSubsystem.resetOdometry(Constants.FieldConstants.CENTER_START);
+            SmartDashboard.putString("Status/Last Action", "Reset to Center");
+        }));
 
     // Right Trigger: Full speed mode
     driverXbox.rightTrigger(0.5)
+        .onTrue(Commands.runOnce(() -> SmartDashboard.putString("Status/Speed Mode", "FULL SPEED")))
+        .onFalse(Commands.runOnce(() -> SmartDashboard.putString("Status/Speed Mode", "Normal")))
         .whileTrue(
             m_DriveSubsystem.driveCommand(
                 () -> MathUtil.applyDeadband(driverXbox.getLeftY(), DEADBAND),
@@ -117,6 +168,8 @@ public class RobotContainer {
     
     // Left Trigger: Slow precision mode
     driverXbox.leftTrigger(0.5)
+        .onTrue(Commands.runOnce(() -> SmartDashboard.putString("Status/Speed Mode", "PRECISION")))
+        .onFalse(Commands.runOnce(() -> SmartDashboard.putString("Status/Speed Mode", "Normal")))
         .whileTrue(
             m_DriveSubsystem.driveCommand(
                 () -> MathUtil.applyDeadband(driverXbox.getLeftY(), DEADBAND) * 0.2,
@@ -127,8 +180,8 @@ public class RobotContainer {
         );
     
     // A button: Run selected auto (for testing in teleop)
-    // This properly gets a fresh command and runs it
     driverXbox.a()
+        .onTrue(Commands.runOnce(() -> SmartDashboard.putString("Status/Last Action", "Running Auto Test")))
         .whileTrue(
             Commands.defer(() -> {
                 Supplier<Command> selectedAutoSupplier = autoChooser.getSelected();
@@ -138,18 +191,21 @@ public class RobotContainer {
                 return Commands.none();
             }, java.util.Set.of(m_DriveSubsystem))
         );
+    
+    // Initialize status
+    SmartDashboard.putString("Status/Speed Mode", "Normal");
+    SmartDashboard.putString("Status/Last Action", "Ready");
   }
 
   // ==================== AUTONOMOUS COMMAND ====================
 
-  /**
-   * Returns a fresh autonomous command each time it's called.
-   */
   public Command getAutonomousCommand() {
     Supplier<Command> selectedAutoSupplier = autoChooser.getSelected();
     if (selectedAutoSupplier != null) {
+      SmartDashboard.putString("Status/Auto Running", "Yes");
       return selectedAutoSupplier.get();
     }
+    SmartDashboard.putString("Status/Auto Running", "No");
     return Commands.none();
   }
 
