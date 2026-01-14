@@ -66,10 +66,17 @@ public class DriveSubsystem extends SubsystemBase
     }
     
     /**
-     * Stop the robot.
+     * Stop the robot completely.
      */
     public void stop() {
-        swerveDrive.driveFieldOriented(new ChassisSpeeds(0, 0, 0));
+        swerveDrive.drive(new ChassisSpeeds(0, 0, 0));
+    }
+
+    /**
+     * Lock the swerve modules to prevent movement.
+     */
+    public void lock() {
+        swerveDrive.lockPose();
     }
 
     public void seedForwards() {
