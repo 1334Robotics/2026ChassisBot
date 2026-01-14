@@ -6,6 +6,7 @@ package frc.robot.subsystems;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Constants;
 
 import java.io.File;
 import edu.wpi.first.wpilibj.Filesystem;
@@ -13,14 +14,30 @@ import swervelib.parser.SwerveParser;
 import swervelib.SwerveDrive;
 import edu.wpi.first.math.util.Units;
 
+import static edu.wpi.first.units.Units.Meter;
+
 public class SwerveSubsystem extends SubsystemBase {
   /** Creates a new ExampleSubsystem. */
-  public SwerveSubsystem() {}
+
+  File directory = new File(Filesystem.getDeployDirectory(),"swerve");
+  SwerveDrive  swerveDrive = new SwerveParser(directory).createSwerveDrive(maximumSpeed);
+
+  public SwerveSubsystem() {
+        try
+    {
+      swerveDrive = new SwerveParser(directory).createSwerveDrive(Constants.MAX_SPEED, startingPose);
+      // Alternative method if you don't want to supply the conversion factor via JSON files.
+      // swerveDrive = new SwerveParser(directory).createSwerveDrive(maximumSpeed, angleConversionFactor, driveConversionFactor);
+    } catch (Exception e)
+    {
+      throw new RuntimeException(e);
+    }
+  }
 
   /**
    * Example command factory method.
    *
-   * @return a command
+   * @return a command 
    */
   public Command exampleMethodCommand() {
     // Inline construction of command goes here.
