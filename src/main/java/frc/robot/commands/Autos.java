@@ -10,7 +10,7 @@ public final class Autos {
    */
   public static Command driveForwardAuto(DriveSubsystem drive) {
     return drive.driveCommand(
-            () -> -0.6, // forward
+            () -> -0.7, // forward
             () -> 0.0,
             () -> 0.0,
             () -> 0.0
