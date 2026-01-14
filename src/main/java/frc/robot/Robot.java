@@ -5,6 +5,7 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
@@ -20,6 +21,7 @@ public class Robot extends TimedRobot {
   @Override
   public void robotInit() {
     m_robotContainer = new RobotContainer();
+    SmartDashboard.putString("Robot/Mode", "Initializing");
   }
 
   /**
@@ -36,11 +38,17 @@ public class Robot extends TimedRobot {
     // and running subsystem periodic() methods.  This must be called from the robot's periodic
     // block in order for anything in the Command-based framework to work.
     CommandScheduler.getInstance().run();
+    
+    // Update match time on dashboard
+    SmartDashboard.putNumber("Robot/Match Time", edu.wpi.first.wpilibj.Timer.getMatchTime());
   }
 
   /** This function is called once each time the robot enters Disabled mode. */
   @Override
-  public void disabledInit() {}
+  public void disabledInit() {
+    SmartDashboard.putString("Robot/Mode", "DISABLED");
+    SmartDashboard.putBoolean("Robot/Enabled", false);
+  }
 
   @Override
   public void disabledPeriodic() {}
@@ -48,12 +56,19 @@ public class Robot extends TimedRobot {
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
+    SmartDashboard.putString("Robot/Mode", "AUTONOMOUS");
+    SmartDashboard.putBoolean("Robot/Enabled", true);
+    SmartDashboard.putString("Status/Auto Running", "Starting...");
+    
     // Get a fresh autonomous command each time
     m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
     // Schedule the autonomous command
     if (m_autonomousCommand != null) {
       m_autonomousCommand.schedule();
+      SmartDashboard.putString("Status/Auto Running", m_autonomousCommand.getName());
+    } else {
+      SmartDashboard.putString("Status/Auto Running", "None Selected");
     }
   }
 
@@ -63,6 +78,10 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopInit() {
+    SmartDashboard.putString("Robot/Mode", "TELEOP");
+    SmartDashboard.putBoolean("Robot/Enabled", true);
+    SmartDashboard.putString("Status/Auto Running", "Cancelled");
+    
     // Cancel autonomous command when teleop starts
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();
@@ -75,6 +94,8 @@ public class Robot extends TimedRobot {
 
   @Override
   public void testInit() {
+    SmartDashboard.putString("Robot/Mode", "TEST");
+    SmartDashboard.putBoolean("Robot/Enabled", true);
     // Cancels all running commands at the start of test mode.
     CommandScheduler.getInstance().cancelAll();
   }
@@ -85,7 +106,9 @@ public class Robot extends TimedRobot {
 
   /** This function is called once when the robot is first started up. */
   @Override
-  public void simulationInit() {}
+  public void simulationInit() {
+    SmartDashboard.putBoolean("Robot/Simulation", true);
+  }
 
   /** This function is called periodically whilst in simulation. */
   @Override
