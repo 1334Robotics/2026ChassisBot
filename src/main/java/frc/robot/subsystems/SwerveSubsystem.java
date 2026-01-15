@@ -86,7 +86,10 @@ public class SwerveSubsystem extends SubsystemBase {
 
   public Command driveFieldOriented(Supplier<ChassisSpeeds> velocity) {
     return run(() -> {
-      swerveDrive.driveFieldOriented(velocity.get());;
+        ChassisSpeeds speeds = velocity.get();
+        if (!(speeds.vxMetersPerSecond == 0 && speeds.vyMetersPerSecond == 0 && speeds.omegaRadiansPerSecond == 0)) {
+            swerveDrive.driveFieldOriented(speeds);
+        }
     });
   }
 }
