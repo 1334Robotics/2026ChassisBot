@@ -12,53 +12,49 @@ import java.io.File;
 import edu.wpi.first.wpilibj.Filesystem;
 import swervelib.parser.SwerveParser;
 import swervelib.SwerveDrive;
-import edu.wpi.first.math.util.Units;
+
+import java.util.function.Supplier;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+
+import static edu.wpi.first.units.Units.Meter;
 
 public class SwerveSubsystem extends SubsystemBase {
-  /** Creates a new ExampleSubsystem. */
 
-double maximumSpeed = Units.feetToMeters(4.5)
 File directory = new File(Filesystem.getDeployDirectory(),"swerve");
-SwerveDrive  swerveDrive;
+SwerveDrive  swerveDrive; 
 
-  public SwerveSubsystem() {}
+  public SwerveSubsystem() {
         try
     {
-            swerveDrive = new SwerveParser(directory).createSwerveDrive(Constants.MAX_SPEED),
-        }
-        catch (Exception
+      swerveDrive = new SwerveParser(directory).createSwerveDrive(Constants.MAX_SPEED);
+                                                                                       new Pose2d( new Translation2d(Meter.of(1),
+                                                                                                                     Meter.of(4)),
+                                                                                        Rotation2d.fromDegrees(0)
+                                                                                      );
+                                                                  
+      
+                                                                                      swerveDrive.resetOdometry(new Pose2d(new Translation2d(5.0, 4.0), Rotation2d.fromDegrees(0)));
 
-  /**
-   * Example command factory method.
-   *
-   * @return a command
-   */
-  public Command exampleMethodCommand() {
-    // Inline construction of command goes here.
-    // Subsystem::RunOnce implicitly requires `this` subsystem.
-    return runOnce(
-        () -> {
-          /* one-time action goes here */
-        });
+    }    catch (Exception e)
+    {
+      throw new RuntimeException(e);}
+    }
+
+
+  public SwerveDrive getSwerveDrive() {
+    return swerveDrive;
   }
 
-  /**
-   * An example method querying a boolean state of the subsystem (for example, a digital sensor).
-   *
-   * @return value of some boolean subsystem state, such as a digital sensor.
-   */
-  public boolean exampleCondition() {
-    // Query some boolean state, such as a digital sensor.
-    return false;
-  }
 
-  @Override
-  public void periodic() {
-    // This method will be called once per scheduler run
-  }
-
-  @Override
-  public void simulationPeriodic() {
-    // This method will be called once per scheduler run during simulation
-  }
+public void driveFieldOriented (ChassisSpeeds velocity){
+  swerveDrive.driveFieldOriented(velocity);
+}
+public Command driveFieldOriented(Supplier<ChassisSpeeds> velocity){
+  return run(() -> {
+    swerveDrive.driveFieldOriented(velocity.get());
+  });
+}
 }
