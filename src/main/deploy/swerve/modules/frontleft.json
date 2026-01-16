@@ -7,7 +7,8 @@
   "drive": {
     "type": "sparkmax",
     "id": 1,
-    "canbus": null
+    "canbus": null,
+    "gearRatio": 6.75
   },
   "inverted": {
     "drive": true,
@@ -16,7 +17,8 @@
   "angle": {
     "type": "sparkmax",
     "id": 8,
-    "canbus": null
+    "canbus": null,
+    "gearRatio": 15.42
   },
   "encoder": {
     "type": "cancoder",
