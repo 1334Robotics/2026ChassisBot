@@ -1,9 +1,11 @@
 package frc.robot;
 
 import java.io.File;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -12,6 +14,9 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 
+import frc.robot.Constants.ControllerConstants;
+import frc.robot.Constants.DriveConstants;
+import frc.robot.Constants.FieldConstants;
 import frc.robot.commands.Autos;
 import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.LimelightVision;
@@ -20,52 +25,59 @@ public class RobotContainer {
 
   private final DriveSubsystem m_DriveSubsystem;
   private final CommandXboxController driverXbox;
-  private final LimelightVision limelightVision;
+  private LimelightVision limelightVision;
   
-  // Autonomous chooser - uses Supplier to create fresh commands each time
+  // Autonomous chooser
   private final SendableChooser<Supplier<Command>> autoChooser;
   
-  // Deadband for joystick
-  private static final double DEADBAND = 0.1;
+  // Speed control - adjustable with bumpers
+  private double speedMultiplier = DriveConstants.DEFAULT_SPEED_MULTIPLIER;
 
   public RobotContainer() {
-    driverXbox = new CommandXboxController(0);
-
-    m_DriveSubsystem =
-        new DriveSubsystem(new File(Filesystem.getDeployDirectory(), "SWERVE"));
-
-    limelightVision = new LimelightVision();
+    // Initialize controller first
+    driverXbox = new CommandXboxController(ControllerConstants.DRIVER_CONTROLLER_PORT);
     
-    // Link vision system to drive subsystem for automatic pose updates
-    limelightVision.setDriveSubsystem(m_DriveSubsystem);
+    // Initialize drive subsystem
+    m_DriveSubsystem = new DriveSubsystem(new File(Filesystem.getDeployDirectory(), "SWERVE"));
+    
+    // Initialize vision (optional - won't crash if it fails)
+    try {
+      limelightVision = new LimelightVision();
+      limelightVision.setDriveSubsystem(m_DriveSubsystem);
+    } catch (Exception e) {
+      DriverStation.reportWarning("LimelightVision initialization failed: " + e.getMessage(), false);
+      limelightVision = null;
+    }
 
-    // Set initial robot position to be inside the field
-    m_DriveSubsystem.resetOdometry(Constants.FieldConstants.BLUE_ALLIANCE_START);
+    // Set initial robot position
+    m_DriveSubsystem.resetOdometry(FieldConstants.BLUE_ALLIANCE_START);
 
     // Setup autonomous chooser
     autoChooser = new SendableChooser<>();
     configureAutoChooser();
 
+    // Configure commands and bindings
     configureDefaultCommand();
     configureBindings();
     
-    // ==================== SMARTDASHBOARD SETUP ====================
+    // Setup dashboard
     setupSmartDashboard();
+    
+    SmartDashboard.putBoolean("Robot/Container Initialized", true);
   }
 
   private void setupSmartDashboard() {
-    // Put command scheduler on dashboard
     SmartDashboard.putData("Commands", CommandScheduler.getInstance());
     
     // Controller info
-    SmartDashboard.putNumber("Controller/Deadband", DEADBAND);
-    SmartDashboard.putNumber("Controller/Normal Speed %", 50);
-    SmartDashboard.putNumber("Controller/Full Speed %", 100);
-    SmartDashboard.putNumber("Controller/Precision Speed %", 20);
+    SmartDashboard.putNumber("Controller/Deadband", DriveConstants.DEADBAND);
+    updateSpeedDisplay();
     
     // Control instructions
     SmartDashboard.putString("Controls/Left Stick", "Move Robot");
     SmartDashboard.putString("Controls/Right Stick X", "Rotate Robot");
+    SmartDashboard.putString("Controls/Right Bumper (R1)", "Increase Speed (+10%)");
+    SmartDashboard.putString("Controls/Left Bumper (L1)", "Decrease Speed (-10%)");
     SmartDashboard.putString("Controls/Right Trigger", "Full Speed Mode");
     SmartDashboard.putString("Controls/Left Trigger", "Precision Mode");
     SmartDashboard.putString("Controls/A Button", "Test Auto");
@@ -73,11 +85,31 @@ public class RobotContainer {
     SmartDashboard.putString("Controls/X Button", "Reset to Red Start");
     SmartDashboard.putString("Controls/Y Button", "Reset to Center");
     SmartDashboard.putString("Controls/POV Down", "Reset Heading");
+    SmartDashboard.putString("Controls/POV Up", "Zero Gyro & Sync Modules");
+  }
+  
+  private void updateSpeedDisplay() {
+    SmartDashboard.putNumber("Controller/Speed Multiplier", speedMultiplier);
+    SmartDashboard.putNumber("Controller/Speed %", Math.round(speedMultiplier * 100));
+  }
+  
+  private void increaseSpeed() {
+    speedMultiplier = Math.min(speedMultiplier + DriveConstants.SPEED_INCREMENT, DriveConstants.MAX_SPEED_MULTIPLIER);
+    speedMultiplier = Math.round(speedMultiplier * 10.0) / 10.0;
+    updateSpeedDisplay();
+    SmartDashboard.putString("Status/Last Action", "Speed: " + Math.round(speedMultiplier * 100) + "%");
+  }
+  
+  private void decreaseSpeed() {
+    speedMultiplier = Math.max(speedMultiplier - DriveConstants.SPEED_INCREMENT, DriveConstants.MIN_SPEED_MULTIPLIER);
+    speedMultiplier = Math.round(speedMultiplier * 10.0) / 10.0;
+    updateSpeedDisplay();
+    SmartDashboard.putString("Status/Last Action", "Speed: " + Math.round(speedMultiplier * 100) + "%");
   }
 
   private void configureAutoChooser() {
-    // Add autonomous options using Suppliers (factories) so fresh commands are created each time
-    autoChooser.setDefaultOption("Simple Forward", () -> Autos.simpleForwardAuto(m_DriveSubsystem));
+    autoChooser.setDefaultOption("Do Nothing", () -> Autos.doNothingAuto());
+    autoChooser.addOption("Simple Forward", () -> Autos.simpleForwardAuto(m_DriveSubsystem));
     autoChooser.addOption("Forward and Back", () -> Autos.forwardAndBackAuto(m_DriveSubsystem));
     autoChooser.addOption("Square Path", () -> Autos.squarePathAuto(m_DriveSubsystem));
     autoChooser.addOption("Figure 8", () -> Autos.figureEightAuto(m_DriveSubsystem));
@@ -87,129 +119,141 @@ public class RobotContainer {
     autoChooser.addOption("Out and Back", () -> Autos.outAndBackAuto(m_DriveSubsystem));
     autoChooser.addOption("Strafe Test", () -> Autos.strafeTestAuto(m_DriveSubsystem));
     autoChooser.addOption("Diagonal Drive", () -> Autos.diagonalDriveAuto(m_DriveSubsystem));
-    autoChooser.addOption("Do Nothing", () -> Autos.doNothingAuto());
     
-    // Put chooser on dashboard
     SmartDashboard.putData("Auto Chooser", autoChooser);
   }
 
-  // ==================== DEFAULT COMMAND ====================
-
   private void configureDefaultCommand() {
-    // Simple default drive command with dashboard updates
     m_DriveSubsystem.setDefaultCommand(
       m_DriveSubsystem.driveCommand(
-        () -> {
-          double input = MathUtil.applyDeadband(driverXbox.getLeftY(), DEADBAND) * 0.5;
-          SmartDashboard.putNumber("Controller/Left Y", driverXbox.getLeftY());
-          SmartDashboard.putNumber("Controller/Left Y (processed)", input);
-          return input;
-        },
-        () -> {
-          double input = MathUtil.applyDeadband(driverXbox.getLeftX(), DEADBAND) * 0.5;
-          SmartDashboard.putNumber("Controller/Left X", driverXbox.getLeftX());
-          SmartDashboard.putNumber("Controller/Left X (processed)", input);
-          return input;
-        },
-        () -> {
-          double input = MathUtil.applyDeadband(driverXbox.getRightX(), DEADBAND) * 0.3;
-          SmartDashboard.putNumber("Controller/Right X", driverXbox.getRightX());
-          SmartDashboard.putNumber("Controller/Right X (processed)", input);
-          return input;
-        },
+        () -> MathUtil.applyDeadband(driverXbox.getLeftY(), DriveConstants.DEADBAND) * speedMultiplier,
+        () -> MathUtil.applyDeadband(driverXbox.getLeftX(), DriveConstants.DEADBAND) * speedMultiplier,
+        () -> MathUtil.applyDeadband(driverXbox.getRightX(), DriveConstants.DEADBAND) * speedMultiplier * DriveConstants.ROTATION_SCALE,
         () -> 0.0
-      )
+      ).withName("DefaultDrive")
     );
   }
 
-  // ==================== BUTTON BINDINGS ====================
-
   private void configureBindings() {
-    // POV Down: Reset heading
-    driverXbox.povDown()
-        .onTrue(Commands.runOnce(() -> {
-            m_DriveSubsystem.seedForwards();
-            SmartDashboard.putString("Status/Last Action", "Heading Reset");
-        }));
+    // Speed control with bumpers
+    driverXbox.rightBumper().onTrue(Commands.runOnce(this::increaseSpeed));
+    driverXbox.leftBumper().onTrue(Commands.runOnce(this::decreaseSpeed));
 
-    // B button: Reset to blue start
-    driverXbox.b()
-        .onTrue(Commands.runOnce(() -> {
-            m_DriveSubsystem.resetOdometry(Constants.FieldConstants.BLUE_ALLIANCE_START);
-            SmartDashboard.putString("Status/Last Action", "Reset to Blue Start");
-        }));
+    // Heading reset (POV Down)
+    driverXbox.povDown().onTrue(Commands.runOnce(() -> {
+      m_DriveSubsystem.seedForwards();
+      SmartDashboard.putString("Status/Last Action", "Heading Reset");
+    }));
     
-    // X button: Reset to red start
-    driverXbox.x()
-        .onTrue(Commands.runOnce(() -> {
-            m_DriveSubsystem.resetOdometry(Constants.FieldConstants.RED_ALLIANCE_START);
-            SmartDashboard.putString("Status/Last Action", "Reset to Red Start");
-        }));
+    // Zero gyro and sync modules (POV Up) - fixes spinning issues
+    driverXbox.povUp().onTrue(Commands.runOnce(() -> {
+      m_DriveSubsystem.zeroGyro();
+      m_DriveSubsystem.synchronizeModuleEncoders();
+      SmartDashboard.putString("Status/Last Action", "Gyro & Modules Zeroed");
+    }));
     
-    // Y button: Reset to center
-    driverXbox.y()
-        .onTrue(Commands.runOnce(() -> {
-            m_DriveSubsystem.resetOdometry(Constants.FieldConstants.CENTER_START);
-            SmartDashboard.putString("Status/Last Action", "Reset to Center");
-        }));
+    // Print encoder offsets for calibration (POV Left)
+    driverXbox.povLeft().onTrue(Commands.runOnce(() -> {
+      m_DriveSubsystem.printEncoderOffsets();
+      SmartDashboard.putString("Status/Last Action", "Printed Encoder Offsets - Check Console");
+    }));
+    
+    // POV Right - Lock wheels in X pattern (prevents pushing)
+    driverXbox.povRight().onTrue(Commands.runOnce(() -> {
+      m_DriveSubsystem.lock();
+      SmartDashboard.putString("Status/Last Action", "Wheels Locked");
+    }));
 
-    // Right Trigger: Full speed mode
-    driverXbox.rightTrigger(0.5)
-        .onTrue(Commands.runOnce(() -> SmartDashboard.putString("Status/Speed Mode", "FULL SPEED")))
-        .onFalse(Commands.runOnce(() -> SmartDashboard.putString("Status/Speed Mode", "Normal")))
-        .whileTrue(
-            m_DriveSubsystem.driveCommand(
-                () -> MathUtil.applyDeadband(driverXbox.getLeftY(), DEADBAND),
-                () -> MathUtil.applyDeadband(driverXbox.getLeftX(), DEADBAND),
-                () -> MathUtil.applyDeadband(driverXbox.getRightX(), DEADBAND) * 0.5,
-                () -> 0.0
-            )
-        );
+    // Position resets
+    driverXbox.b().onTrue(Commands.runOnce(() -> {
+      m_DriveSubsystem.resetOdometry(FieldConstants.BLUE_ALLIANCE_START);
+      SmartDashboard.putString("Status/Last Action", "Reset to Blue Start");
+    }));
     
-    // Left Trigger: Slow precision mode
-    driverXbox.leftTrigger(0.5)
-        .onTrue(Commands.runOnce(() -> SmartDashboard.putString("Status/Speed Mode", "PRECISION")))
-        .onFalse(Commands.runOnce(() -> SmartDashboard.putString("Status/Speed Mode", "Normal")))
-        .whileTrue(
-            m_DriveSubsystem.driveCommand(
-                () -> MathUtil.applyDeadband(driverXbox.getLeftY(), DEADBAND) * 0.2,
-                () -> MathUtil.applyDeadband(driverXbox.getLeftX(), DEADBAND) * 0.2,
-                () -> MathUtil.applyDeadband(driverXbox.getRightX(), DEADBAND) * 0.1,
-                () -> 0.0
-            )
-        );
+    driverXbox.x().onTrue(Commands.runOnce(() -> {
+      m_DriveSubsystem.resetOdometry(FieldConstants.RED_ALLIANCE_START);
+      SmartDashboard.putString("Status/Last Action", "Reset to Red Start");
+    }));
     
-    // A button: Run selected auto (for testing in teleop)
+    driverXbox.y().onTrue(Commands.runOnce(() -> {
+      m_DriveSubsystem.resetOdometry(FieldConstants.CENTER_START);
+      SmartDashboard.putString("Status/Last Action", "Reset to Center");
+    }));
+
+    // Full speed mode (right trigger)
+    driverXbox.rightTrigger(ControllerConstants.TRIGGER_THRESHOLD)
+      .onTrue(Commands.runOnce(() -> SmartDashboard.putString("Status/Speed Mode", "FULL SPEED")))
+      .onFalse(Commands.runOnce(() -> SmartDashboard.putString("Status/Speed Mode", "Normal")))
+      .whileTrue(
+        m_DriveSubsystem.driveCommand(
+          () -> MathUtil.applyDeadband(driverXbox.getLeftY(), DriveConstants.DEADBAND),
+          () -> MathUtil.applyDeadband(driverXbox.getLeftX(), DriveConstants.DEADBAND),
+          () -> MathUtil.applyDeadband(driverXbox.getRightX(), DriveConstants.DEADBAND) * DriveConstants.FULL_SPEED_ROTATION_SCALE,
+          () -> 0.0
+        ).withName("FullSpeedDrive")
+      );
+    
+    // Precision mode (left trigger)
+    driverXbox.leftTrigger(ControllerConstants.TRIGGER_THRESHOLD)
+      .onTrue(Commands.runOnce(() -> SmartDashboard.putString("Status/Speed Mode", "PRECISION")))
+      .onFalse(Commands.runOnce(() -> SmartDashboard.putString("Status/Speed Mode", "Normal")))
+      .whileTrue(
+        m_DriveSubsystem.driveCommand(
+          () -> MathUtil.applyDeadband(driverXbox.getLeftY(), DriveConstants.DEADBAND) * DriveConstants.PRECISION_MULTIPLIER,
+          () -> MathUtil.applyDeadband(driverXbox.getLeftX(), DriveConstants.DEADBAND) * DriveConstants.PRECISION_MULTIPLIER,
+          () -> MathUtil.applyDeadband(driverXbox.getRightX(), DriveConstants.DEADBAND) * DriveConstants.PRECISION_ROTATION_SCALE,
+          () -> 0.0
+        ).withName("PrecisionDrive")
+      );
+    
+    // Test auto with A button
     driverXbox.a()
-        .onTrue(Commands.runOnce(() -> SmartDashboard.putString("Status/Last Action", "Running Auto Test")))
-        .whileTrue(
-            Commands.defer(() -> {
-                Supplier<Command> selectedAutoSupplier = autoChooser.getSelected();
-                if (selectedAutoSupplier != null) {
-                    return selectedAutoSupplier.get();
-                }
-                return Commands.none();
-            }, java.util.Set.of(m_DriveSubsystem))
-        );
+      .onTrue(Commands.runOnce(() -> SmartDashboard.putString("Status/Last Action", "Running Auto Test")))
+      .whileTrue(
+        Commands.defer(this::getSelectedAutoCommand, Set.of(m_DriveSubsystem))
+      );
     
     // Initialize status
     SmartDashboard.putString("Status/Speed Mode", "Normal");
     SmartDashboard.putString("Status/Last Action", "Ready");
   }
-
-  // ==================== AUTONOMOUS COMMAND ====================
-
-  public Command getAutonomousCommand() {
-    Supplier<Command> selectedAutoSupplier = autoChooser.getSelected();
-    if (selectedAutoSupplier != null) {
-      SmartDashboard.putString("Status/Auto Running", "Yes");
-      return selectedAutoSupplier.get();
+  
+  /**
+   * Get the currently selected autonomous command.
+   */
+  private Command getSelectedAutoCommand() {
+    try {
+      Supplier<Command> selectedSupplier = autoChooser.getSelected();
+      if (selectedSupplier != null) {
+        Command cmd = selectedSupplier.get();
+        return cmd != null ? cmd : Commands.none();
+      }
+    } catch (Exception e) {
+      DriverStation.reportError("Error getting auto command: " + e.getMessage(), false);
     }
-    SmartDashboard.putString("Status/Auto Running", "No");
     return Commands.none();
   }
 
-  public void teleopSequence() {
+  /**
+   * Get the autonomous command to run.
+   */
+  public Command getAutonomousCommand() {
+    Command autoCommand = getSelectedAutoCommand();
+    String autoName = autoCommand.getName();
+    SmartDashboard.putString("Status/Auto Selected", autoName);
+    return autoCommand;
+  }
+
+  /**
+   * Called when teleop starts.
+   */
+  public void teleopInit() {
+    // Zero gyro and sync modules when teleop starts to prevent spinning
+    m_DriveSubsystem.zeroGyro();
+    m_DriveSubsystem.synchronizeModuleEncoders();
+    
     SmartDashboard.putData("Commands", CommandScheduler.getInstance());
+    SmartDashboard.putString("Status/Speed Mode", "Normal");
+    updateSpeedDisplay();
   }
 }

@@ -1,7 +1,10 @@
 package frc.robot.commands;
 
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import frc.robot.Constants;
 import frc.robot.subsystems.DriveSubsystem;
 
@@ -17,9 +20,9 @@ public final class Autos {
    */
   public static Command simpleForwardAuto(DriveSubsystem drive) {
     return Commands.sequence(
-        Commands.runOnce(() -> drive.resetOdometry(Constants.FieldConstants.BLUE_ALLIANCE_START)),
-        driveForTime(drive, 0.4, 0.0, 0.0, 2.0),
-        Commands.runOnce(() -> drive.stop())
+        resetPose(drive, Constants.FieldConstants.BLUE_ALLIANCE_START),
+        timedDrive(drive, 0.4, 0.0, 0.0, 2.0),
+        stopDrive(drive)
     ).withName("Simple Forward Auto");
   }
 
@@ -28,11 +31,11 @@ public final class Autos {
    */
   public static Command forwardAndBackAuto(DriveSubsystem drive) {
     return Commands.sequence(
-        Commands.runOnce(() -> drive.resetOdometry(Constants.FieldConstants.BLUE_ALLIANCE_START)),
-        driveForTime(drive, 0.5, 0.0, 0.0, 2.0),
+        resetPose(drive, Constants.FieldConstants.BLUE_ALLIANCE_START),
+        timedDrive(drive, 0.5, 0.0, 0.0, 2.0),
         Commands.waitSeconds(0.5),
-        driveForTime(drive, -0.5, 0.0, 0.0, 2.0),
-        Commands.runOnce(() -> drive.stop())
+        timedDrive(drive, -0.5, 0.0, 0.0, 2.0),
+        stopDrive(drive)
     ).withName("Forward and Back Auto");
   }
 
@@ -43,19 +46,19 @@ public final class Autos {
    */
   public static Command squarePathAuto(DriveSubsystem drive) {
     return Commands.sequence(
-        Commands.runOnce(() -> drive.resetOdometry(Constants.FieldConstants.CENTER_START)),
+        resetPose(drive, Constants.FieldConstants.CENTER_START),
         // Side 1: Forward
-        driveForTime(drive, 0.4, 0.0, 0.0, 1.5),
+        timedDrive(drive, 0.4, 0.0, 0.0, 1.5),
         Commands.waitSeconds(0.3),
         // Side 2: Strafe right
-        driveForTime(drive, 0.0, -0.4, 0.0, 1.5),
+        timedDrive(drive, 0.0, -0.4, 0.0, 1.5),
         Commands.waitSeconds(0.3),
         // Side 3: Backward
-        driveForTime(drive, -0.4, 0.0, 0.0, 1.5),
+        timedDrive(drive, -0.4, 0.0, 0.0, 1.5),
         Commands.waitSeconds(0.3),
         // Side 4: Strafe left
-        driveForTime(drive, 0.0, 0.4, 0.0, 1.5),
-        Commands.runOnce(() -> drive.stop())
+        timedDrive(drive, 0.0, 0.4, 0.0, 1.5),
+        stopDrive(drive)
     ).withName("Square Path Auto");
   }
 
@@ -64,12 +67,12 @@ public final class Autos {
    */
   public static Command figureEightAuto(DriveSubsystem drive) {
     return Commands.sequence(
-        Commands.runOnce(() -> drive.resetOdometry(Constants.FieldConstants.CENTER_START)),
+        resetPose(drive, Constants.FieldConstants.CENTER_START),
         // First circle (turn left while moving forward)
-        driveForTime(drive, 0.3, 0.0, 0.4, 3.0),
+        timedDrive(drive, 0.3, 0.0, 0.4, 3.0),
         // Second circle (turn right while moving forward)
-        driveForTime(drive, 0.3, 0.0, -0.4, 3.0),
-        Commands.runOnce(() -> drive.stop())
+        timedDrive(drive, 0.3, 0.0, -0.4, 3.0),
+        stopDrive(drive)
     ).withName("Figure 8 Auto");
   }
 
@@ -78,13 +81,13 @@ public final class Autos {
    */
   public static Command spinInPlaceAuto(DriveSubsystem drive) {
     return Commands.sequence(
-        Commands.runOnce(() -> drive.resetOdometry(Constants.FieldConstants.CENTER_START)),
-        // Spin 360 degrees clockwise
-        driveForTime(drive, 0.0, 0.0, 0.5, 2.0),
+        resetPose(drive, Constants.FieldConstants.CENTER_START),
+        // Spin clockwise
+        timedDrive(drive, 0.0, 0.0, 0.5, 2.0),
         Commands.waitSeconds(0.5),
-        // Spin 360 degrees counter-clockwise
-        driveForTime(drive, 0.0, 0.0, -0.5, 2.0),
-        Commands.runOnce(() -> drive.stop())
+        // Spin counter-clockwise
+        timedDrive(drive, 0.0, 0.0, -0.5, 2.0),
+        stopDrive(drive)
     ).withName("Spin in Place Auto");
   }
 
@@ -93,14 +96,14 @@ public final class Autos {
    */
   public static Command sCurveAuto(DriveSubsystem drive) {
     return Commands.sequence(
-        Commands.runOnce(() -> drive.resetOdometry(Constants.FieldConstants.BLUE_ALLIANCE_START)),
+        resetPose(drive, Constants.FieldConstants.BLUE_ALLIANCE_START),
         // Curve right while moving forward
-        driveForTime(drive, 0.4, 0.0, -0.3, 2.0),
+        timedDrive(drive, 0.4, 0.0, -0.3, 2.0),
         // Curve left while moving forward
-        driveForTime(drive, 0.4, 0.0, 0.3, 2.0),
+        timedDrive(drive, 0.4, 0.0, 0.3, 2.0),
         // Curve right while moving forward
-        driveForTime(drive, 0.4, 0.0, -0.3, 2.0),
-        Commands.runOnce(() -> drive.stop())
+        timedDrive(drive, 0.4, 0.0, -0.3, 2.0),
+        stopDrive(drive)
     ).withName("S-Curve Auto");
   }
 
@@ -111,10 +114,9 @@ public final class Autos {
    */
   public static Command mobilityAuto(DriveSubsystem drive) {
     return Commands.sequence(
-        Commands.runOnce(() -> drive.resetOdometry(Constants.FieldConstants.BLUE_ALLIANCE_START)),
-        // Drive forward to leave starting zone
-        driveForTime(drive, 0.5, 0.0, 0.0, 3.0),
-        Commands.runOnce(() -> drive.stop()),
+        resetPose(drive, Constants.FieldConstants.BLUE_ALLIANCE_START),
+        timedDrive(drive, 0.5, 0.0, 0.0, 3.0),
+        stopDrive(drive),
         Commands.runOnce(() -> drive.lock())
     ).withName("Mobility Auto");
   }
@@ -124,16 +126,16 @@ public final class Autos {
    */
   public static Command outAndBackAuto(DriveSubsystem drive) {
     return Commands.sequence(
-        Commands.runOnce(() -> drive.resetOdometry(Constants.FieldConstants.BLUE_ALLIANCE_START)),
+        resetPose(drive, Constants.FieldConstants.BLUE_ALLIANCE_START),
         // Drive forward
-        driveForTime(drive, 0.5, 0.0, 0.0, 2.5),
+        timedDrive(drive, 0.5, 0.0, 0.0, 2.5),
         Commands.waitSeconds(0.3),
         // Turn 180 degrees
-        driveForTime(drive, 0.0, 0.0, 0.5, 2.0),
+        timedDrive(drive, 0.0, 0.0, 0.5, 2.0),
         Commands.waitSeconds(0.3),
         // Drive back to start
-        driveForTime(drive, 0.5, 0.0, 0.0, 2.5),
-        Commands.runOnce(() -> drive.stop())
+        timedDrive(drive, 0.5, 0.0, 0.0, 2.5),
+        stopDrive(drive)
     ).withName("Out and Back Auto");
   }
 
@@ -142,13 +144,13 @@ public final class Autos {
    */
   public static Command strafeTestAuto(DriveSubsystem drive) {
     return Commands.sequence(
-        Commands.runOnce(() -> drive.resetOdometry(Constants.FieldConstants.CENTER_START)),
+        resetPose(drive, Constants.FieldConstants.CENTER_START),
         // Strafe left
-        driveForTime(drive, 0.0, 0.4, 0.0, 2.0),
+        timedDrive(drive, 0.0, 0.4, 0.0, 2.0),
         Commands.waitSeconds(0.5),
         // Strafe right
-        driveForTime(drive, 0.0, -0.4, 0.0, 2.0),
-        Commands.runOnce(() -> drive.stop())
+        timedDrive(drive, 0.0, -0.4, 0.0, 2.0),
+        stopDrive(drive)
     ).withName("Strafe Test Auto");
   }
 
@@ -157,41 +159,75 @@ public final class Autos {
    */
   public static Command diagonalDriveAuto(DriveSubsystem drive) {
     return Commands.sequence(
-        Commands.runOnce(() -> drive.resetOdometry(Constants.FieldConstants.BLUE_ALLIANCE_START)),
+        resetPose(drive, Constants.FieldConstants.BLUE_ALLIANCE_START),
         // Drive diagonally forward-right
-        driveForTime(drive, 0.4, -0.4, 0.0, 2.0),
+        timedDrive(drive, 0.4, -0.4, 0.0, 2.0),
         Commands.waitSeconds(0.3),
         // Drive diagonally forward-left
-        driveForTime(drive, 0.4, 0.4, 0.0, 2.0),
+        timedDrive(drive, 0.4, 0.4, 0.0, 2.0),
         Commands.waitSeconds(0.3),
         // Drive diagonally backward-left
-        driveForTime(drive, -0.4, 0.4, 0.0, 2.0),
+        timedDrive(drive, -0.4, 0.4, 0.0, 2.0),
         Commands.waitSeconds(0.3),
         // Drive diagonally backward-right
-        driveForTime(drive, -0.4, -0.4, 0.0, 2.0),
-        Commands.runOnce(() -> drive.stop())
+        timedDrive(drive, -0.4, -0.4, 0.0, 2.0),
+        stopDrive(drive)
     ).withName("Diagonal Drive Auto");
   }
 
   // ==================== HELPER METHODS ====================
 
   /**
-   * Helper method to create a timed drive command.
-   * 
-   * @param drive DriveSubsystem instance
-   * @param xSpeed Forward/backward speed (-1 to 1)
-   * @param ySpeed Left/right strafe speed (-1 to 1)
-   * @param rotSpeed Rotation speed (-1 to 1)
-   * @param seconds Duration in seconds
-   * @return Command that drives for the specified time
+   * Creates a command that drives for a specified time using FunctionalCommand.
+   * This properly handles the subsystem requirement.
    */
-  public static Command driveForTime(DriveSubsystem drive, double xSpeed, double ySpeed, double rotSpeed, double seconds) {
-    return drive.driveCommand(
-        () -> xSpeed,
-        () -> ySpeed,
-        () -> rotSpeed,
-        () -> 0.0
+  private static Command timedDrive(DriveSubsystem drive, double xSpeed, double ySpeed, double rotSpeed, double seconds) {
+    final double maxSpeed = 3.0; // m/s
+    final double maxAngular = Math.PI; // rad/s
+    
+    return new FunctionalCommand(
+        // Init - log start
+        () -> SmartDashboard.putString("Auto/Current Step", 
+            String.format("Drive: X=%.1f Y=%.1f R=%.1f for %.1fs", xSpeed, ySpeed, rotSpeed, seconds)),
+        // Execute - drive the robot
+        () -> {
+            ChassisSpeeds speeds = new ChassisSpeeds(
+                xSpeed * maxSpeed,
+                ySpeed * maxSpeed,
+                rotSpeed * maxAngular
+            );
+            drive.driveFieldOriented(speeds);
+        },
+        // End - stop the robot
+        (interrupted) -> {
+            drive.driveFieldOriented(new ChassisSpeeds(0, 0, 0));
+            SmartDashboard.putString("Auto/Current Step", interrupted ? "Interrupted" : "Step Complete");
+        },
+        // IsFinished - never (timeout handles this)
+        () -> false,
+        // Requirements
+        drive
     ).withTimeout(seconds);
+  }
+
+  /**
+   * Creates a command to reset the robot pose.
+   */
+  private static Command resetPose(DriveSubsystem drive, edu.wpi.first.math.geometry.Pose2d pose) {
+    return Commands.runOnce(() -> {
+        drive.resetOdometry(pose);
+        SmartDashboard.putString("Auto/Current Step", "Reset Pose");
+    });
+  }
+
+  /**
+   * Creates a command to stop the drive.
+   */
+  private static Command stopDrive(DriveSubsystem drive) {
+    return Commands.runOnce(() -> {
+        drive.stop();
+        SmartDashboard.putString("Auto/Current Step", "Stopped");
+    }, drive);
   }
 
   /**
