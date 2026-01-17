@@ -243,16 +243,6 @@ public class DriveSubsystem extends SubsystemBase
     }
     
     /**
-     * Get a command to zero the gyro and sync modules.
-     */
-    public Command zeroCommand() {
-        return Commands.runOnce(() -> {
-            zeroGyro();
-            synchronizeModuleEncoders();
-        }).withName("ZeroDrive");
-    }
-    
-    /**
      * Safely drive field oriented, handling errors gracefully.
      */
     private void driveFieldOrientedSafe(ChassisSpeeds speeds) {
@@ -403,7 +393,7 @@ public class DriveSubsystem extends SubsystemBase
     }
 
     /**
-     * Get the Field2d object for adding trajectories.
+     * Get the Field2d object for adding trajectories and visualization.
      */
     public Field2d getField2d() {
         return field2d;

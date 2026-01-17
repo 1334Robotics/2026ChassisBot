@@ -20,7 +20,6 @@ import com.revrobotics.spark.SparkAbsoluteEncoder;
  */
 public class SwerveModule {
     private static final double kMaxSpeed = 4.5; // m/s
-    private static final double ENCODER_CONVERSION = 2.0 * Math.PI; // radians per rotation
 
     private final SparkMax driveMotor;
     private final SparkMax turningMotor;
@@ -38,10 +37,10 @@ public class SwerveModule {
     }
 
     /**
-     * Convert encoder position to radians.
+     * Get encoder position in radians.
      */
     private double getTurningRadians() {
-        return turningEncoder.getPosition() * ENCODER_CONVERSION;
+        return turningEncoder.getPosition();
     }
 
     /**
@@ -74,9 +73,10 @@ public class SwerveModule {
             return;
         }
         
+        // Use WPILib's optimize method which handles all edge cases correctly
         SwerveModuleState optimizedState = SwerveModuleState.optimize(
             desiredState,
-            new Rotation2d(getTurningRadians())
+            getState().angle
         );
 
         // Set drive motor power (normalized 0-1)

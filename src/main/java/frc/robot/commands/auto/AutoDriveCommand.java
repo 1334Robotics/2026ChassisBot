@@ -7,7 +7,8 @@ import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.DriveSubsystem;
 
 /**
- * Drive to a target pose autonomously with timeout protection.
+ * Drive to a target pose autonomously.
+ * Moves in straight lines between waypoints using field-oriented control.
  */
 public class AutoDriveCommand extends Command {
     private final DriveSubsystem drive;
@@ -16,17 +17,16 @@ public class AutoDriveCommand extends Command {
     private final double timeoutSeconds;
     private double startTime;
     
-    private static final double POSITION_TOLERANCE = 0.1; // meters
-    private static final double ANGLE_TOLERANCE = 5.0; // degrees
+    private static final double POSITION_TOLERANCE = 0.20; // meters
+    private static final double ANGLE_TOLERANCE = 15.0; // degrees
     private static final double KP_LINEAR = 2.0;
-    private static final double KP_ANGULAR = 3.0;
+    private static final double KP_ANGULAR = 1.5;
     
     public AutoDriveCommand(DriveSubsystem drive, Pose2d targetPose, double maxSpeed, double timeoutSeconds) {
         this.drive = drive;
         this.targetPose = targetPose;
         this.maxSpeed = maxSpeed;
         this.timeoutSeconds = timeoutSeconds;
-        
         addRequirements(drive);
     }
     
@@ -36,65 +36,54 @@ public class AutoDriveCommand extends Command {
         drive.zeroGyro();
         
         Pose2d currentPose = drive.getPose();
-        System.out.println("[AutoDriveCommand] Starting from (" + 
+        System.out.println("[AutoDriveCommand] Moving from (" + 
             String.format("%.2f, %.2f", currentPose.getX(), currentPose.getY()) + 
-            ") heading to (" + 
-            String.format("%.2f, %.2f", targetPose.getX(), targetPose.getY()) + ")");
+            ") to (" + String.format("%.2f, %.2f", targetPose.getX(), targetPose.getY()) + ")");
     }
     
     @Override
     public void execute() {
         Pose2d currentPose = drive.getPose();
         
-        // Calculate position error
+        // Calculate error to target in field frame
         double dx = targetPose.getX() - currentPose.getX();
         double dy = targetPose.getY() - currentPose.getY();
         double distance = Math.hypot(dx, dy);
         
-        // If very close to target, stop moving to prevent jitter
-        if (distance < 0.05) {
-            drive.stop();
-            System.out.println("[AutoDriveCommand] Reached target position");
-            return;
-        }
-        
-        if (distance < 0.1) {
-            // Already at target position, focus on rotation only
-            double angleError = targetPose.getRotation().getDegrees() - currentPose.getRotation().getDegrees();
-            angleError = normalizeAngle(angleError);
+        // If close enough to target, just rotate to final heading
+        if (distance < POSITION_TOLERANCE) {
+            double angleError = normalizeAngle(
+                targetPose.getRotation().getDegrees() - currentPose.getRotation().getDegrees()
+            );
             
             if (Math.abs(angleError) < ANGLE_TOLERANCE) {
                 drive.stop();
                 return;
             }
             
-            double angularSpeed = Math.min(KP_ANGULAR * Math.toRadians(angleError), 2.0 * Math.PI);
-            drive.driveFieldOriented(new ChassisSpeeds(0, 0, angularSpeed));
+            double omega = KP_ANGULAR * Math.toRadians(angleError);
+            omega = clamp(omega, -Math.PI, Math.PI);
+            drive.driveFieldOriented(new ChassisSpeeds(0, 0, omega));
             return;
         }
         
-        // Calculate angle to target
-        double targetHeading = Math.atan2(dy, dx);
-        double currentHeading = currentPose.getRotation().getRadians();
-        double headingError = targetHeading - currentHeading;
+        // Calculate speed toward target with proportional control
+        double speed = Math.min(KP_LINEAR * distance, maxSpeed);
+        speed = Math.max(0.3, speed); // Minimum speed
         
-        // Normalize heading error to [-π, π]
-        while (headingError > Math.PI) headingError -= 2 * Math.PI;
-        while (headingError < -Math.PI) headingError += 2 * Math.PI;
+        // Normalize direction vector and apply speed
+        double vx = (dx / distance) * speed;
+        double vy = (dy / distance) * speed;
         
-        // PID control for speed toward target
-        double linearSpeed = Math.min(KP_LINEAR * distance, maxSpeed);
+        // Also correct heading while moving
+        double angleError = normalizeAngle(
+            targetPose.getRotation().getDegrees() - currentPose.getRotation().getDegrees()
+        );
+        double omega = KP_ANGULAR * Math.toRadians(angleError);
+        omega = clamp(omega, -Math.PI / 2, Math.PI / 2); // Limit rotation speed
         
-        // Drive directly toward target in field-oriented mode
-        double vx = linearSpeed * Math.cos(targetHeading);
-        double vy = linearSpeed * Math.sin(targetHeading);
-        
-        // Also correct heading if needed
-        double angleError = targetPose.getRotation().getDegrees() - currentPose.getRotation().getDegrees();
-        angleError = normalizeAngle(angleError);
-        double angularSpeed = Math.min(KP_ANGULAR * Math.toRadians(angleError), 2.0 * Math.PI);
-        
-        drive.driveFieldOriented(new ChassisSpeeds(vx, vy, angularSpeed));
+        // Send velocities to drive (field-oriented)
+        drive.driveFieldOriented(new ChassisSpeeds(vx, vy, omega));
     }
     
     @Override
@@ -112,11 +101,11 @@ public class AutoDriveCommand extends Command {
         boolean timedOut = (Timer.getFPGATimestamp() - startTime) > timeoutSeconds;
         
         if (atTarget) {
-            System.out.println("[AutoDriveCommand] Reached target successfully");
+            System.out.println("[AutoDriveCommand] Reached target");
         }
         if (timedOut) {
-            System.out.println("[AutoDriveCommand] Command timed out at (" + 
-                String.format("%.2f, %.2f", currentPose.getX(), currentPose.getY()) + ")");
+            System.out.println("[AutoDriveCommand] Timed out at distance: " + 
+                String.format("%.2f", distance) + "m");
         }
         
         return atTarget || timedOut;
@@ -125,14 +114,15 @@ public class AutoDriveCommand extends Command {
     @Override
     public void end(boolean interrupted) {
         drive.stop();
-        if (interrupted) {
-            System.out.println("[AutoDriveCommand] Interrupted");
-        }
     }
     
     private double normalizeAngle(double angle) {
         while (angle > 180) angle -= 360;
         while (angle < -180) angle += 360;
         return angle;
+    }
+    
+    private double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
     }
 }
