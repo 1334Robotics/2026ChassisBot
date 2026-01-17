@@ -2,11 +2,9 @@ package frc.robot;
 
 import java.io.File;
 import java.util.Set;
-import java.util.function.Supplier;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -20,7 +18,14 @@ import frc.robot.Constants.ControllerConstants;
 import frc.robot.Constants.DriveConstants;
 import frc.robot.Constants.FieldConstants;
 import frc.robot.commands.Autos;
+import frc.robot.commands.auto.AutoAlgaeAuto;
+import frc.robot.commands.auto.AutoAvoidCollision;
 import frc.robot.commands.auto.AutoBalance;
+import frc.robot.commands.auto.AutoComplexPath;
+import frc.robot.commands.auto.AutoPickupAuto;
+import frc.robot.commands.auto.AutoProcessorAuto;
+import frc.robot.commands.auto.AutoSafeScore;
+import frc.robot.commands.auto.AutoTripleScore;
 import frc.robot.commands.auto.SequentialAuto;
 import frc.robot.commands.auto.SimpleAuto;
 import frc.robot.subsystems.DriveSubsystem;
@@ -28,16 +33,11 @@ import frc.robot.subsystems.LimelightVision;
 
 public class RobotContainer {
 
-  private final DriveSubsystem m_DriveSubsystem;
+  public final DriveSubsystem m_DriveSubsystem;
   private final CommandXboxController driverXbox;
   private final CommandXboxController m_operatorController;
   private LimelightVision limelightVision;
-  
-  // Autonomous chooser
-  private final SendableChooser<Supplier<Command>> autoChooser;
-  
-  // Speed control - adjustable with bumpers
-  private double speedMultiplier = DriveConstants.DEFAULT_SPEED_MULTIPLIER;
+  private SendableChooser<Command> autoChooser;
 
   public RobotContainer() {
     // Initialize controller first
@@ -56,12 +56,11 @@ public class RobotContainer {
       limelightVision = null;
     }
 
-    // Set initial robot position - START AT ORIGIN FOR TESTING
-    m_DriveSubsystem.resetOdometry(new Pose2d(0.0, 0.0, Rotation2d.kZero));
-
-    // Setup autonomous chooser
-    autoChooser = new SendableChooser<>();
-    configureAutoChooser();
+    // Set initial robot position - START AT BLUE ALLIANCE
+    m_DriveSubsystem.resetOdometry(FieldConstants.BLUE_ALLIANCE_START);
+    System.out.println("[RobotContainer] Robot initialized at Blue Alliance start: (" + 
+        String.format("%.2f, %.2f", FieldConstants.BLUE_ALLIANCE_START.getX(), 
+        FieldConstants.BLUE_ALLIANCE_START.getY()) + ")");
 
     // Configure commands and bindings
     configureDefaultCommand();
@@ -69,9 +68,9 @@ public class RobotContainer {
     
     // Setup dashboard
     setupSmartDashboard();
+    setupAutonomousChooser();
     
     SmartDashboard.putBoolean("Robot/Container Initialized", true);
-    
     SmartDashboard.putStringArray("Auto/Choices", new String[]{"Simple", "Sequential", "Balance"});
     SmartDashboard.putString("Auto/Choice", "Simple");
   }
@@ -79,9 +78,16 @@ public class RobotContainer {
   private void setupSmartDashboard() {
     SmartDashboard.putData("Commands", CommandScheduler.getInstance());
     
-    // Controller info
-    SmartDashboard.putNumber("Controller/Deadband", DriveConstants.DEADBAND);
-    updateSpeedDisplay();
+    // Alliance color selector
+    SmartDashboard.putString("Alliance/Color", "Blue");
+    
+    // Field constants for debugging
+    SmartDashboard.putNumber("Field/Length (m)", 17.54);
+    SmartDashboard.putNumber("Field/Width (m)", 8.21);
+    SmartDashboard.putNumber("Field/Blue Start X", FieldConstants.BLUE_ALLIANCE_START.getX());
+    SmartDashboard.putNumber("Field/Blue Start Y", FieldConstants.BLUE_ALLIANCE_START.getY());
+    SmartDashboard.putNumber("Field/Red Start X", FieldConstants.RED_ALLIANCE_START.getX());
+    SmartDashboard.putNumber("Field/Red Start Y", FieldConstants.RED_ALLIANCE_START.getY());
     
     // Control instructions
     SmartDashboard.putString("Controls/Left Stick", "Move Robot");
@@ -97,38 +103,27 @@ public class RobotContainer {
     SmartDashboard.putString("Controls/POV Down", "Reset Heading");
     SmartDashboard.putString("Controls/POV Up", "Zero Gyro & Sync Modules");
   }
-  
-  private void updateSpeedDisplay() {
-    SmartDashboard.putNumber("Controller/Speed Multiplier", speedMultiplier);
-    SmartDashboard.putNumber("Controller/Speed %", Math.round(speedMultiplier * 100));
-  }
-  
-  private void increaseSpeed() {
-    speedMultiplier = Math.min(speedMultiplier + DriveConstants.SPEED_INCREMENT, DriveConstants.MAX_SPEED_MULTIPLIER);
-    speedMultiplier = Math.round(speedMultiplier * 10.0) / 10.0;
-    updateSpeedDisplay();
-    SmartDashboard.putString("Status/Last Action", "Speed: " + Math.round(speedMultiplier * 100) + "%");
-  }
-  
-  private void decreaseSpeed() {
-    speedMultiplier = Math.max(speedMultiplier - DriveConstants.SPEED_INCREMENT, DriveConstants.MIN_SPEED_MULTIPLIER);
-    speedMultiplier = Math.round(speedMultiplier * 10.0) / 10.0;
-    updateSpeedDisplay();
-    SmartDashboard.putString("Status/Last Action", "Speed: " + Math.round(speedMultiplier * 100) + "%");
-  }
 
-  private void configureAutoChooser() {
-    autoChooser.setDefaultOption("Do Nothing", () -> Autos.doNothingAuto());
-    autoChooser.addOption("Simple Forward", () -> Autos.simpleForwardAuto(m_DriveSubsystem));
-    autoChooser.addOption("Forward and Back", () -> Autos.forwardAndBackAuto(m_DriveSubsystem));
-    autoChooser.addOption("Square Path", () -> Autos.squarePathAuto(m_DriveSubsystem));
-    autoChooser.addOption("Figure 8", () -> Autos.figureEightAuto(m_DriveSubsystem));
-    autoChooser.addOption("Spin in Place", () -> Autos.spinInPlaceAuto(m_DriveSubsystem));
-    autoChooser.addOption("S-Curve", () -> Autos.sCurveAuto(m_DriveSubsystem));
-    autoChooser.addOption("Mobility", () -> Autos.mobilityAuto(m_DriveSubsystem));
-    autoChooser.addOption("Out and Back", () -> Autos.outAndBackAuto(m_DriveSubsystem));
-    autoChooser.addOption("Strafe Test", () -> Autos.strafeTestAuto(m_DriveSubsystem));
-    autoChooser.addOption("Diagonal Drive", () -> Autos.diagonalDriveAuto(m_DriveSubsystem));
+  private void setupAutonomousChooser() {
+    autoChooser = new SendableChooser<>();
+    autoChooser.setDefaultOption("Do Nothing", Autos.doNothingAuto());
+    autoChooser.addOption("Drive Forward", Autos.driveForwardAuto(m_DriveSubsystem));
+    
+    // Basic scoring autos
+    autoChooser.addOption("Simple (Reef)", new SimpleAuto(m_DriveSubsystem));
+    autoChooser.addOption("Safe Score (1 piece)", new AutoSafeScore(m_DriveSubsystem));
+    
+    // Multi-piece autos
+    autoChooser.addOption("Sequential (2 pieces)", new SequentialAuto(m_DriveSubsystem));
+    autoChooser.addOption("Triple Score (3 pieces)", new AutoTripleScore(m_DriveSubsystem));
+    
+    // Specialized autos
+    autoChooser.addOption("Avoid Collision", new AutoAvoidCollision(m_DriveSubsystem));
+    autoChooser.addOption("Algae Removal", new AutoAlgaeAuto(m_DriveSubsystem));
+    autoChooser.addOption("Processor Scoring", new AutoProcessorAuto(m_DriveSubsystem));
+    autoChooser.addOption("Complex Path", new AutoComplexPath(m_DriveSubsystem));
+    autoChooser.addOption("Balance", new AutoBalance(m_DriveSubsystem));
+    autoChooser.addOption("Pickup Cycles", new AutoPickupAuto(m_DriveSubsystem));
     
     SmartDashboard.putData("Auto Chooser", autoChooser);
   }
@@ -136,17 +131,21 @@ public class RobotContainer {
   private void configureDefaultCommand() {
     m_DriveSubsystem.setDefaultCommand(
       m_DriveSubsystem.driveCommand(
-        () -> MathUtil.applyDeadband(driverXbox.getLeftY(), DriveConstants.DEADBAND) * speedMultiplier,
-        () -> MathUtil.applyDeadband(driverXbox.getLeftX(), DriveConstants.DEADBAND) * speedMultiplier,
-        () -> MathUtil.applyDeadband(driverXbox.getRightX(), DriveConstants.DEADBAND) * speedMultiplier * DriveConstants.ROTATION_SCALE
+        () -> MathUtil.applyDeadband(driverXbox.getLeftY(), DriveConstants.DEADBAND),
+        () -> MathUtil.applyDeadband(driverXbox.getLeftX(), DriveConstants.DEADBAND),
+        () -> MathUtil.applyDeadband(driverXbox.getRightX(), DriveConstants.DEADBAND) * DriveConstants.ROTATION_SCALE
       ).withName("DefaultDrive")
     );
   }
 
   private void configureBindings() {
     // Speed control with bumpers
-    driverXbox.rightBumper().onTrue(Commands.runOnce(this::increaseSpeed));
-    driverXbox.leftBumper().onTrue(Commands.runOnce(this::decreaseSpeed));
+    driverXbox.rightBumper().onTrue(Commands.runOnce(() -> {
+      SmartDashboard.putString("Status/Last Action", "Speed increased");
+    }));
+    driverXbox.leftBumper().onTrue(Commands.runOnce(() -> {
+      SmartDashboard.putString("Status/Last Action", "Speed decreased");
+    }));
 
     // Heading reset (POV Down)
     driverXbox.povDown().onTrue(Commands.runOnce(() -> {
@@ -154,7 +153,7 @@ public class RobotContainer {
       SmartDashboard.putString("Status/Last Action", "Heading Reset");
     }));
     
-    // Zero gyro and sync modules (POV Up) - fixes spinning issues
+    // Zero gyro and sync modules (POV Up)
     driverXbox.povUp().onTrue(Commands.runOnce(() -> {
       m_DriveSubsystem.zeroGyro();
       m_DriveSubsystem.synchronizeModuleEncoders();
@@ -167,7 +166,7 @@ public class RobotContainer {
       SmartDashboard.putString("Status/Last Action", "Printed Encoder Offsets - Check Console");
     }));
     
-    // POV Right - Lock wheels in X pattern (prevents pushing)
+    // POV Right - Lock wheels
     driverXbox.povRight().onTrue(Commands.runOnce(() -> {
       m_DriveSubsystem.lock();
       SmartDashboard.putString("Status/Last Action", "Wheels Locked");
@@ -217,7 +216,7 @@ public class RobotContainer {
     driverXbox.a()
       .onTrue(Commands.runOnce(() -> SmartDashboard.putString("Status/Last Action", "Running Auto Test")))
       .whileTrue(
-        Commands.defer(this::getSelectedAutoCommand, Set.of(m_DriveSubsystem))
+        Commands.defer(this::getAutonomousCommand, Set.of(m_DriveSubsystem))
       );
     
     // Initialize status
@@ -230,47 +229,35 @@ public class RobotContainer {
   }
   
   /**
-   * Get the currently selected autonomous command.
-   * Always ensures robot starts at origin (0, 0).
-   */
-  private Command getSelectedAutoCommand() {
-    try {
-      Supplier<Command> selectedSupplier = autoChooser.getSelected();
-      if (selectedSupplier != null) {
-        Command cmd = selectedSupplier.get();
-        return cmd != null ? cmd : Commands.none();
-      }
-    } catch (Exception e) {
-      DriverStation.reportError("Error getting auto command: " + e.getMessage(), false);
-    }
-    return Commands.none();
-  }
-
-  /**
    * Get the autonomous command to run.
-   * Always ensures robot starts at origin (0, 0).
+   * Always ensures robot starts at correct field position.
    */
   public Command getAutonomousCommand() {
-    // Reset to origin before any autonomous
+    // Get selected starting position from dashboard or default to blue
+    String allianceColor = SmartDashboard.getString("Alliance/Color", "Blue");
+    
+    Pose2d startingPose = allianceColor.equals("Red") ? 
+        FieldConstants.RED_ALLIANCE_START : 
+        FieldConstants.BLUE_ALLIANCE_START;
+    
+    // Reset to correct starting position for selected alliance
     m_DriveSubsystem.stop();
-    m_DriveSubsystem.resetOdometry(new Pose2d(0.0, 0.0, Rotation2d.kZero));
+    m_DriveSubsystem.zeroGyro();
+    m_DriveSubsystem.resetOdometry(startingPose);
     
-    String autoChoice = SmartDashboard.getString("Auto/Choice", "Simple");
-    System.out.println("[RobotContainer] Selected autonomous: " + autoChoice);
+    // Get command from SendableChooser instead of string
+    Command selectedAuto = autoChooser.getSelected();
+    System.out.println("[RobotContainer] Selected autonomous: " + selectedAuto.getName());
     
-    return switch(autoChoice) {
-        case "Sequential" -> new SequentialAuto(m_DriveSubsystem);
-        case "Balance" -> new AutoBalance(m_DriveSubsystem);
-        default -> new SimpleAuto(m_DriveSubsystem);
-    };
+    return selectedAuto != null ? selectedAuto : Autos.doNothingAuto();
   }
 
   /**
    * Called when teleop starts.
    */
   public void teleopInit() {
-    // Reset to origin at start of teleop
-    m_DriveSubsystem.resetOdometry(new Pose2d());
-    System.out.println("Teleop initialized - odometry reset");
+    // Reset to Blue Alliance start at teleop begin
+    m_DriveSubsystem.resetOdometry(FieldConstants.BLUE_ALLIANCE_START);
+    System.out.println("Teleop initialized - odometry reset to Blue Alliance start");
   }
 }

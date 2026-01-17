@@ -10,6 +10,9 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
+/**
+ * Limelight vision subsystem for AprilTag detection.
+ */
 public class LimelightVision extends SubsystemBase {
     // NetworkTable entries
     private final NetworkTable limelightTable;
@@ -50,6 +53,7 @@ public class LimelightVision extends SubsystemBase {
     
     public LimelightVision() {
         this("limelight");
+        System.out.println("[LimelightVision] Initialized");
     }
     
     /**
@@ -196,7 +200,16 @@ public class LimelightVision extends SubsystemBase {
         // Calculate timestamp with latency compensation
         double timestamp = Timer.getFPGATimestamp() - (totalLatencyMs / 1000.0);
         
-        driveSubsystem.addVisionMeasurement(visionPose, timestamp);
+        updateVisionPose(visionPose, timestamp);
+    }
+    
+    /**
+     * Update vision pose in the drive subsystem.
+     */
+    public void updateVisionPose(Pose2d visionPose, double timestamp) {
+        if (driveSubsystem != null && visionPose != null) {
+            driveSubsystem.addVisionMeasurement(visionPose, timestamp);
+        }
     }
     
     /**

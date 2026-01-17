@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.math.geometry.Pose2d;
 
 /**
  * The methods in this class are called automatically corresponding to each mode, as described in
@@ -21,7 +22,6 @@ public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
   private RobotContainer m_robotContainer;
   private boolean robotInitialized = false;
-  private static final long INIT_TIMEOUT_MS = 5000; // 5 second timeout
 
   @Override
   public void robotInit() {
@@ -95,21 +95,58 @@ public class Robot extends TimedRobot {
       // Small delay to ensure systems are ready
       Thread.sleep(100);
       
+      // Log position BEFORE getting autonomous command
+      Pose2d prePose = m_robotContainer.m_DriveSubsystem.getPose();
+      System.out.println("[Robot] Position BEFORE getAutonomousCommand: (" + 
+          String.format("%.2f, %.2f", prePose.getX(), prePose.getY()) + ")");
+      
       // Get a fresh autonomous command each time
       m_autonomousCommand = m_robotContainer.getAutonomousCommand();
+
+      // Log position AFTER getting autonomous command (but before scheduling)
+      Pose2d postPose = m_robotContainer.m_DriveSubsystem.getPose();
+      System.out.println("[Robot] Position AFTER getAutonomousCommand: (" + 
+          String.format("%.2f, %.2f", postPose.getX(), postPose.getY()) + ")");
+      
+      // Verify robot is on field before starting autonomous
+      if (!isValidFieldPosition(postPose)) {
+        DriverStation.reportWarning("WARNING: Robot starting position outside field bounds! Pos: (" + 
+            String.format("%.2f, %.2f", postPose.getX(), postPose.getY()) + ")", false);
+      }
 
       // Schedule the autonomous command
       if (m_autonomousCommand != null) {
         m_autonomousCommand.schedule();
         SmartDashboard.putString("Status/Auto Running", m_autonomousCommand.getName());
-        System.out.println("[Robot] Autonomous started: " + m_autonomousCommand.getName());
+        System.out.println("[Robot] Autonomous scheduled: " + m_autonomousCommand.getName());
       } else {
         SmartDashboard.putString("Status/Auto Running", "None (Error: null command)");
       }
     } catch (Exception e) {
       DriverStation.reportError("autonomousInit error: " + e.getMessage(), e.getStackTrace());
       SmartDashboard.putString("Status/Auto Running", "Error: " + e.getMessage());
+      System.out.println("[Robot] Exception in autonomousInit: " + e.getMessage());
+      e.printStackTrace();
     }
+  }
+
+  /**
+   * Verify robot position is within valid FRC field bounds.
+   * FRC field: 16.46m × 8.23m with 0.5m buffer for bumpers
+   */
+  private boolean isValidFieldPosition(Pose2d pose) {
+    final double FIELD_LENGTH = 16.46;
+    final double FIELD_WIDTH = 8.23;
+    final double BUFFER = 0.5;
+    
+    boolean xValid = pose.getX() >= -BUFFER && pose.getX() <= FIELD_LENGTH + BUFFER;
+    boolean yValid = pose.getY() >= -BUFFER && pose.getY() <= FIELD_WIDTH + BUFFER;
+    
+    System.out.println("[Robot] Field validation - X: " + String.format("%.2f", pose.getX()) + 
+        " (valid: " + xValid + "), Y: " + String.format("%.2f", pose.getY()) + 
+        " (valid: " + yValid + ")");
+    
+    return xValid && yValid;
   }
 
   /** This function is called periodically during autonomous. */
