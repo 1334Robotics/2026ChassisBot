@@ -37,121 +37,101 @@ public class DriveSubsystem extends SubsystemBase
     // Startup delay to allow modules to initialize
     private double startupTime = 0;
     private static final double STARTUP_DELAY_SECONDS = 0.5;
+    private static final double MAX_DT = 0.1; // Maximum delta time for physics updates
+    private static final double DEADZONE_THRESHOLD = 0.05; // Input deadzone
     
     public DriveSubsystem(File directory) {
         // Initialize Field2d first (always works)
         field2d = new Field2d();
         SmartDashboard.putData("Field", field2d);
         
-        try {
-            File swerveJsonDirectory = new File(Filesystem.getDeployDirectory(), "SWERVE");
-            
-            // Check if directory exists
-            if (!swerveJsonDirectory.exists()) {
-                DriverStation.reportError("SWERVE directory not found: " + swerveJsonDirectory.getAbsolutePath(), false);
-                SmartDashboard.putString("Drive/Error", "SWERVE directory not found");
-                return;
-            }
-            
-            // List all files for debugging
-            File[] files = swerveJsonDirectory.listFiles();
-            if (files != null) {
-                System.out.println("=== SWERVE Directory Contents ===");
-                for (File f : files) {
-                    System.out.println("  " + f.getName() + " (isFile: " + f.isFile() + ", isDir: " + f.isDirectory() + ")");
-                }
-                System.out.println("=================================");
-            }
-            
-            // Check modules subdirectory
-            File modulesDir = new File(swerveJsonDirectory, "modules");
-            if (modulesDir.exists() && modulesDir.isDirectory()) {
-                File[] moduleFiles = modulesDir.listFiles();
-                if (moduleFiles != null) {
-                    System.out.println("=== SWERVE/modules Contents ===");
-                    for (File f : moduleFiles) {
-                        System.out.println("  " + f.getName());
-                    }
-                    System.out.println("=================================");
-                }
-            }
-            
-            System.out.println("Creating SwerveDrive with max speed: " + DriveConstants.MAX_SPEED_MPS + " m/s");
-            System.out.println("Running in " + (RobotBase.isSimulation() ? "SIMULATION" : "REAL") + " mode");
-            
-            swerveDrive = new SwerveParser(swerveJsonDirectory).createSwerveDrive(DriveConstants.MAX_SPEED_MPS);
-            
-            // Verify all modules loaded
-            var modules = swerveDrive.getModules();
-            System.out.println("========================================");
-            System.out.println("SUCCESS: Loaded " + modules.length + " swerve modules");
-            System.out.println("========================================");
-            SmartDashboard.putNumber("Drive/Module Count", modules.length);
-            
-            // Print details of each module
-            for (int i = 0; i < modules.length; i++) {
-                if (modules[i] != null) {
-                    System.out.println("Module " + i + " initialized successfully");
-                    SmartDashboard.putBoolean("Drive/Module " + i + " OK", true);
-                } else {
-                    System.out.println("WARNING: Module " + i + " is NULL!");
-                    SmartDashboard.putBoolean("Drive/Module " + i + " OK", false);
-                }
-            }
-            
-            if (modules.length != 4) {
-                DriverStation.reportError("Expected 4 modules, got " + modules.length, false);
-                System.out.println("ERROR: Only " + modules.length + " modules loaded!");
-            } else {
-                System.out.println("All 4 modules loaded correctly!");
-            }
-            
-            initialized = true;
-            
-            // Zero the gyro on startup to prevent initial spinning
-            zeroGyro();
-            
-            // Synchronize module encoders
-            synchronizeModuleEncoders();
-            
-            SmartDashboard.putBoolean("Drive/Initialized", true);
-            
-        } catch (Exception e) {
-            System.out.println("========================================");
-            System.out.println("FATAL ERROR during swerve initialization:");
-            System.out.println("Message: " + e.getMessage());
-            System.out.println("Stack trace:");
-            e.printStackTrace();
-            System.out.println("========================================");
-            DriverStation.reportError("Failed to initialize swerve drive: " + e.getMessage(), e.getStackTrace());
-            SmartDashboard.putString("Drive/Error", "Init failed: " + e.getMessage());
-            SmartDashboard.putBoolean("Drive/Initialized", false);
-            
-            // In simulation, we can continue without hardware
-            if (RobotBase.isSimulation()) {
-                DriverStation.reportWarning("Running in simulation mode without full swerve hardware", false);
-            }
-        }
-        
-        // Put initial values on dashboard
-        SmartDashboard.putNumber("Drive/Max Speed (m/s)", DriveConstants.MAX_SPEED_MPS);
-        SmartDashboard.putNumber("Drive/Max Angular Velocity (rad/s)", DriveConstants.MAX_ANGULAR_VELOCITY);
+        initializeSwerve();
         
         lastUpdateTime = Timer.getFPGATimestamp();
         startupTime = Timer.getFPGATimestamp();
     }
     
     /**
+     * Initialize swerve drive with detailed error handling and logging.
+     */
+    private void initializeSwerve() {
+        try {
+            File swerveJsonDirectory = new File(Filesystem.getDeployDirectory(), "SWERVE");
+            
+            if (!swerveJsonDirectory.exists()) {
+                logError("SWERVE directory not found: " + swerveJsonDirectory.getAbsolutePath());
+                return;
+            }
+            
+            logDebug("Creating SwerveDrive with max speed: " + DriveConstants.MAX_SPEED_MPS + " m/s");
+            logDebug("Running in " + (RobotBase.isSimulation() ? "SIMULATION" : "REAL") + " mode");
+            
+            swerveDrive = new SwerveParser(swerveJsonDirectory).createSwerveDrive(DriveConstants.MAX_SPEED_MPS);
+            
+            verifyModules();
+            
+            initialized = true;
+            zeroGyro();
+            synchronizeModuleEncoders();
+            SmartDashboard.putBoolean("Drive/Initialized", true);
+            
+        } catch (Exception e) {
+            logError("FATAL ERROR during swerve initialization: " + e.getMessage());
+            e.printStackTrace();
+            SmartDashboard.putString("Drive/Error", "Init failed: " + e.getMessage());
+            SmartDashboard.putBoolean("Drive/Initialized", false);
+        }
+        
+        SmartDashboard.putNumber("Drive/Max Speed (m/s)", DriveConstants.MAX_SPEED_MPS);
+        SmartDashboard.putNumber("Drive/Max Angular Velocity (rad/s)", DriveConstants.MAX_ANGULAR_VELOCITY);
+    }
+    
+    /**
+     * Verify all modules loaded correctly.
+     */
+    private void verifyModules() {
+        var modules = swerveDrive.getModules();
+        logDebug("Loaded " + modules.length + " swerve modules");
+        SmartDashboard.putNumber("Drive/Module Count", modules.length);
+        
+        for (int i = 0; i < modules.length; i++) {
+            boolean isValid = modules[i] != null;
+            logDebug("Module " + i + ": " + (isValid ? "OK" : "NULL"));
+            SmartDashboard.putBoolean("Drive/Module " + i + " OK", isValid);
+        }
+        
+        if (modules.length != 4) {
+            logError("Expected 4 modules, got " + modules.length);
+        }
+    }
+    
+    /**
+     * Log debug message to console and optionally SmartDashboard.
+     */
+    private void logDebug(String message) {
+        System.out.println("[DriveSubsystem] " + message);
+    }
+    
+    /**
+     * Log error message to console and SmartDashboard.
+     */
+    private void logError(String message) {
+        System.out.println("[DriveSubsystem ERROR] " + message);
+        SmartDashboard.putString("Drive/Error", message);
+        DriverStation.reportError(message, false);
+    }
+    
+    /**
      * Zero the gyroscope heading.
      */
     public void zeroGyro() {
-        if (isInitialized()) {
-            try {
-                swerveDrive.zeroGyro();
-                SmartDashboard.putBoolean("Drive/Gyro Zeroed", true);
-            } catch (Exception e) {
-                DriverStation.reportError("zeroGyro error: " + e.getMessage(), false);
-            }
+        if (!isInitialized()) return;
+        
+        try {
+            swerveDrive.zeroGyro();
+            SmartDashboard.putBoolean("Drive/Gyro Zeroed", true);
+        } catch (Exception e) {
+            logError("zeroGyro error: " + e.getMessage());
         }
     }
     
@@ -159,14 +139,14 @@ public class DriveSubsystem extends SubsystemBase
      * Synchronize module encoders to absolute encoders.
      */
     public void synchronizeModuleEncoders() {
-        if (isInitialized()) {
-            try {
-                swerveDrive.synchronizeModuleEncoders();
-                hasZeroed = true;
-                SmartDashboard.putBoolean("Drive/Modules Synced", true);
-            } catch (Exception e) {
-                DriverStation.reportWarning("synchronizeModuleEncoders error: " + e.getMessage(), false);
-            }
+        if (!isInitialized()) return;
+        
+        try {
+            swerveDrive.synchronizeModuleEncoders();
+            hasZeroed = true;
+            SmartDashboard.putBoolean("Drive/Modules Synced", true);
+        } catch (Exception e) {
+            DriverStation.reportWarning("synchronizeModuleEncoders error: " + e.getMessage(), false);
         }
     }
     
@@ -192,34 +172,39 @@ public class DriveSubsystem extends SubsystemBase
     }
     
     /**
+     * Apply deadzone to joystick input.
+     */
+    private double applyDeadzone(double value) {
+        return Math.abs(value) < DEADZONE_THRESHOLD ? 0.0 : value;
+    }
+    
+    /**
      * Command to drive the robot using joystick inputs.
      */
     public Command driveCommand(DoubleSupplier translationX, DoubleSupplier translationY, 
                                 DoubleSupplier rotationX, DoubleSupplier headingY) {
         return run(() -> {
+            if (!isReadyToDrive()) {
+                stop();
+                return;
+            }
+            
             try {
-                // Don't drive during startup delay
-                if (!isReadyToDrive()) {
-                    stop();
-                    return;
-                }
-                
-                // Get and validate joystick inputs (already has deadband applied from RobotContainer)
-                double xInput = clamp(translationX.getAsDouble(), -1.0, 1.0);
-                double yInput = clamp(translationY.getAsDouble(), -1.0, 1.0);
-                double rotInput = clamp(rotationX.getAsDouble(), -1.0, 1.0);
+                // Get joystick inputs with deadzone
+                double xInput = applyDeadzone(clamp(translationX.getAsDouble(), -1.0, 1.0));
+                double yInput = applyDeadzone(clamp(translationY.getAsDouble(), -1.0, 1.0));
+                double rotInput = applyDeadzone(clamp(rotationX.getAsDouble(), -1.0, 1.0));
                 
                 // Convert to velocities
                 currentXSpeed = xInput * DriveConstants.MAX_SPEED_MPS;
                 currentYSpeed = yInput * DriveConstants.MAX_SPEED_MPS;
                 currentRotSpeed = rotInput * DriveConstants.MAX_ANGULAR_VELOCITY;
                 
-                // Create and apply chassis speeds
-                ChassisSpeeds speeds = new ChassisSpeeds(currentXSpeed, currentYSpeed, currentRotSpeed);
-                driveFieldOrientedSafe(speeds);
+                // Apply chassis speeds
+                driveFieldOrientedSafe(new ChassisSpeeds(currentXSpeed, currentYSpeed, currentRotSpeed));
                 
             } catch (Exception e) {
-                DriverStation.reportError("Drive command error: " + e.getMessage(), false);
+                logError("Drive command error: " + e.getMessage());
                 stop();
             }
         }).withName("DriveCommand");
@@ -243,10 +228,9 @@ public class DriveSubsystem extends SubsystemBase
             try {
                 swerveDrive.driveFieldOriented(speeds);
             } catch (Exception e) {
-                DriverStation.reportError("driveFieldOriented error: " + e.getMessage(), false);
+                logError("driveFieldOriented error: " + e.getMessage());
             }
         } else if (RobotBase.isSimulation()) {
-            // Simulate movement in simulation mode
             updateSimulatedPose(speeds);
         }
     }
@@ -256,22 +240,20 @@ public class DriveSubsystem extends SubsystemBase
      */
     private void updateSimulatedPose(ChassisSpeeds speeds) {
         double currentTime = Timer.getFPGATimestamp();
-        double dt = currentTime - lastUpdateTime;
+        double dt = clamp(currentTime - lastUpdateTime, 0.0, MAX_DT);
         lastUpdateTime = currentTime;
         
-        // Clamp dt to reasonable values
-        dt = clamp(dt, 0.0, 0.1);
-        
-        // Field-oriented speeds are already in the field frame, so use them directly
         double dx = speeds.vxMetersPerSecond * dt;
-        double dy = -speeds.vyMetersPerSecond * dt;
+        double dy = speeds.vyMetersPerSecond * dt;
         double dTheta = speeds.omegaRadiansPerSecond * dt;
         
-        double newX = simPose.getX() + dx;
-        double newY = simPose.getY() + dy;
-        Rotation2d newRotation = simPose.getRotation().plus(new Rotation2d(dTheta));
+        Pose2d newPose = new Pose2d(
+            simPose.getX() + dx,
+            simPose.getY() + dy,
+            simPose.getRotation().plus(new Rotation2d(dTheta))
+        );
         
-        simPose = new Pose2d(newX, newY, newRotation);
+        simPose = newPose;
     }
     
     /**
@@ -286,7 +268,7 @@ public class DriveSubsystem extends SubsystemBase
             try {
                 swerveDrive.driveFieldOriented(new ChassisSpeeds(0, 0, 0));
             } catch (Exception e) {
-                DriverStation.reportError("Stop error: " + e.getMessage(), false);
+                logError("Stop error: " + e.getMessage());
             }
         }
         SmartDashboard.putString("Drive/Status", "Stopped");
@@ -301,7 +283,7 @@ public class DriveSubsystem extends SubsystemBase
                 swerveDrive.lockPose();
                 SmartDashboard.putBoolean("Drive/Locked", true);
             } catch (Exception e) {
-                DriverStation.reportError("Lock error: " + e.getMessage(), false);
+                logError("Lock error: " + e.getMessage());
             }
         }
     }
@@ -316,7 +298,7 @@ public class DriveSubsystem extends SubsystemBase
             resetOdometry(new Pose2d(pose.getX(), pose.getY(), Rotation2d.kZero));
             SmartDashboard.putBoolean("Drive/Heading Reset", true);
         } catch (Exception e) {
-            DriverStation.reportError("seedForwards error: " + e.getMessage(), false);
+            logError("seedForwards error: " + e.getMessage());
         }
     }
     
@@ -328,7 +310,6 @@ public class DriveSubsystem extends SubsystemBase
             velocity = new ChassisSpeeds(0, 0, 0);
         }
         
-        // Update tracked speeds
         currentXSpeed = velocity.vxMetersPerSecond;
         currentYSpeed = velocity.vyMetersPerSecond;
         currentRotSpeed = velocity.omegaRadiansPerSecond;
@@ -344,7 +325,7 @@ public class DriveSubsystem extends SubsystemBase
             try {
                 return swerveDrive.getPose();
             } catch (Exception e) {
-                DriverStation.reportError("getPose error: " + e.getMessage(), false);
+                logError("getPose error: " + e.getMessage());
             }
         }
         return simPose;
@@ -358,13 +339,13 @@ public class DriveSubsystem extends SubsystemBase
             pose = new Pose2d();
         }
         
-        simPose = pose; // Always update sim pose
+        simPose = pose;
         
         if (isInitialized()) {
             try {
                 swerveDrive.resetOdometry(pose);
             } catch (Exception e) {
-                DriverStation.reportError("resetOdometry error: " + e.getMessage(), false);
+                logError("resetOdometry error: " + e.getMessage());
             }
         }
         
@@ -383,7 +364,7 @@ public class DriveSubsystem extends SubsystemBase
         try {
             swerveDrive.addVisionMeasurement(visionPose, timestamp);
         } catch (Exception e) {
-            DriverStation.reportError("addVisionMeasurement error: " + e.getMessage(), false);
+            logError("addVisionMeasurement error: " + e.getMessage());
         }
     }
 
@@ -392,14 +373,6 @@ public class DriveSubsystem extends SubsystemBase
      */
     public Field2d getField2d() {
         return field2d;
-    }
-    
-    /**
-     * Update the Field2d display with current robot pose and module directions.
-     */
-    public void updateField2dDisplay() {
-        Pose2d pose = getPose();
-        field2d.setRobotPose(pose);
     }
 
     /**
@@ -411,7 +384,6 @@ public class DriveSubsystem extends SubsystemBase
 
     /**
      * Print current absolute encoder positions for calibration.
-     * Point all modules forward, then call this to get offset values.
      */
     public void printEncoderOffsets() {
         if (!isInitialized()) {
@@ -421,7 +393,6 @@ public class DriveSubsystem extends SubsystemBase
         
         String[] moduleNames = {"Front Left", "Front Right", "Back Left", "Back Right"};
         System.out.println("========== ENCODER OFFSETS ==========");
-        System.out.println("Point all wheels forward, then use these as offsets:");
         
         try {
             var modules = swerveDrive.getModules();
@@ -433,16 +404,50 @@ public class DriveSubsystem extends SubsystemBase
                 }
             }
         } catch (Exception e) {
-            System.out.println("Error reading encoders: " + e.getMessage());
+            logError("Error reading encoders: " + e.getMessage());
         }
         System.out.println("======================================");
+    }
+
+    /**
+     * Diagnose gyro issues and display info.
+     */
+    public void diagnoseGyro() {
+        if (!isInitialized()) {
+            System.out.println("Drive not initialized");
+            return;
+        }
+        
+        try {
+            var heading = swerveDrive.getOdometryHeading();
+            
+            System.out.println("=== GYRO DIAGNOSTICS ===");
+            System.out.println("Heading: " + heading.getDegrees() + "°");
+            System.out.println("========================");
+            
+            SmartDashboard.putNumber("Gyro/Heading", heading.getDegrees());
+        } catch (Exception e) {
+            logError("Gyro diagnostic error: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Calibrate gyro by measuring drift at rest.
+     */
+    public void calibrateGyroDrift() {
+        if (!isInitialized()) {
+            System.out.println("Drive not initialized");
+            return;
+        }
+        
+        System.out.println("Robot must be stationary. Measuring gyro drift for 3 seconds...");
+        System.out.println("If robot rotates without input, gyro has drift issues.");
+        SmartDashboard.putString("Gyro/Status", "Check if robot spins without commands");
     }
 
     @Override 
     public void periodic() {
         try {
-            // Update Field2d with current robot pose
-            updateField2dDisplay();
             Pose2d pose = getPose();
             field2d.setRobotPose(pose);
             
@@ -478,7 +483,7 @@ public class DriveSubsystem extends SubsystemBase
             SmartDashboard.putBoolean("Drive/Simulation", RobotBase.isSimulation());
             
         } catch (Exception e) {
-            DriverStation.reportError("DriveSubsystem periodic error: " + e.getMessage(), false);
+            logError("Periodic error: " + e.getMessage());
         }
     }
     
@@ -494,9 +499,7 @@ public class DriveSubsystem extends SubsystemBase
         
         try {
             var modules = swerveDrive.getModules();
-            if (modules == null) {
-                return;
-            }
+            if (modules == null) return;
             
             for (int i = 0; i < modules.length && i < moduleNames.length; i++) {
                 try {
@@ -511,7 +514,7 @@ public class DriveSubsystem extends SubsystemBase
                 }
             }
         } catch (Exception e) {
-            // Silently handle - modules may not be available in simulation
+            // Silently handle - modules may not be available
         }
     }
 }

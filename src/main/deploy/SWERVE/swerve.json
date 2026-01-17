@@ -1,0 +1,9 @@
+{
+  "gyro": {
+    "type": "pigeon2",
+    "id": 1,
+    "canbus": null
+  },
+  "invertedDrive": false,
+  "maxSpeed": 4.5
+}
