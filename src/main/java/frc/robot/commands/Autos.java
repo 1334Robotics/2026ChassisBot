@@ -178,13 +178,17 @@ public final class Autos {
   // ==================== HELPER METHODS ====================
 
   /**
-   * Creates a command that drives for a specified time using FunctionalCommand.
-   * This properly handles the subsystem requirement.
+   * Creates a command that drives for a specified time.
+   * Uses FunctionalCommand for proper subsystem requirement handling.
+   * 
+   * @param drive The drive subsystem to control
+   * @param xSpeed Normalized forward speed (-1.0 to 1.0)
+   * @param ySpeed Normalized strafe speed (-1.0 to 1.0)
+   * @param rotSpeed Normalized rotation speed (-1.0 to 1.0)
+   * @param seconds Duration to drive
+   * @return Command that executes for the specified time
    */
   private static Command timedDrive(DriveSubsystem drive, double xSpeed, double ySpeed, double rotSpeed, double seconds) {
-    final double maxSpeed = 3.0; // m/s
-    final double maxAngular = Math.PI; // rad/s
-    
     return new FunctionalCommand(
         // Init - log start
         () -> SmartDashboard.putString("Auto/Current Step", 
@@ -192,9 +196,9 @@ public final class Autos {
         // Execute - drive the robot
         () -> {
             ChassisSpeeds speeds = new ChassisSpeeds(
-                xSpeed * maxSpeed,
-                ySpeed * maxSpeed,
-                rotSpeed * maxAngular
+                xSpeed * 3.0,      // 3.0 m/s max linear
+                ySpeed * 3.0,
+                rotSpeed * Math.PI // π rad/s max angular
             );
             drive.driveFieldOriented(speeds);
         },
@@ -203,7 +207,7 @@ public final class Autos {
             drive.driveFieldOriented(new ChassisSpeeds(0, 0, 0));
             SmartDashboard.putString("Auto/Current Step", interrupted ? "Interrupted" : "Step Complete");
         },
-        // IsFinished - never (timeout handles this)
+        // IsFinished - never (timeout handles termination)
         () -> false,
         // Requirements
         drive
@@ -211,7 +215,11 @@ public final class Autos {
   }
 
   /**
-   * Creates a command to reset the robot pose.
+   * Reset robot odometry to a starting pose.
+   * 
+   * @param drive The drive subsystem
+   * @param pose The pose to reset to
+   * @return One-time command that resets odometry
    */
   private static Command resetPose(DriveSubsystem drive, edu.wpi.first.math.geometry.Pose2d pose) {
     return Commands.runOnce(() -> {
@@ -221,7 +229,10 @@ public final class Autos {
   }
 
   /**
-   * Creates a command to stop the drive.
+   * Stop all robot motion and disable drive.
+   * 
+   * @param drive The drive subsystem
+   * @return One-time command that stops the drive
    */
   private static Command stopDrive(DriveSubsystem drive) {
     return Commands.runOnce(() -> {

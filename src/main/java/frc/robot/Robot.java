@@ -21,14 +21,17 @@ public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
   private RobotContainer m_robotContainer;
   private boolean robotInitialized = false;
+  private static final long INIT_TIMEOUT_MS = 5000; // 5 second timeout
 
   @Override
   public void robotInit() {
+    long startTime = System.currentTimeMillis();
     try {
       m_robotContainer = new RobotContainer();
       robotInitialized = true;
       SmartDashboard.putBoolean("Robot/Initialized", true);
       SmartDashboard.putString("Robot/Mode", "Initialized");
+      SmartDashboard.putNumber("Robot/Init Time (ms)", System.currentTimeMillis() - startTime);
 
       // Simulation info
       if (RobotBase.isSimulation()) {
@@ -39,6 +42,7 @@ public class Robot extends TimedRobot {
       DriverStation.reportError("Robot initialization failed: " + e.getMessage(), e.getStackTrace());
       SmartDashboard.putBoolean("Robot/Initialized", false);
       SmartDashboard.putString("Robot/Error", e.getMessage());
+      robotInitialized = false;
     }
   }
 
@@ -88,6 +92,9 @@ public class Robot extends TimedRobot {
     }
 
     try {
+      // Small delay to ensure systems are ready
+      Thread.sleep(100);
+      
       // Get a fresh autonomous command each time
       m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
@@ -95,8 +102,9 @@ public class Robot extends TimedRobot {
       if (m_autonomousCommand != null) {
         m_autonomousCommand.schedule();
         SmartDashboard.putString("Status/Auto Running", m_autonomousCommand.getName());
+        System.out.println("[Robot] Autonomous started: " + m_autonomousCommand.getName());
       } else {
-        SmartDashboard.putString("Status/Auto Running", "None");
+        SmartDashboard.putString("Status/Auto Running", "None (Error: null command)");
       }
     } catch (Exception e) {
       DriverStation.reportError("autonomousInit error: " + e.getMessage(), e.getStackTrace());

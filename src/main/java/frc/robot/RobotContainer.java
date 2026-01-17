@@ -5,6 +5,8 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -18,6 +20,9 @@ import frc.robot.Constants.ControllerConstants;
 import frc.robot.Constants.DriveConstants;
 import frc.robot.Constants.FieldConstants;
 import frc.robot.commands.Autos;
+import frc.robot.commands.auto.AutoBalance;
+import frc.robot.commands.auto.SequentialAuto;
+import frc.robot.commands.auto.SimpleAuto;
 import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.LimelightVision;
 
@@ -25,6 +30,7 @@ public class RobotContainer {
 
   private final DriveSubsystem m_DriveSubsystem;
   private final CommandXboxController driverXbox;
+  private final CommandXboxController m_operatorController;
   private LimelightVision limelightVision;
   
   // Autonomous chooser
@@ -36,6 +42,7 @@ public class RobotContainer {
   public RobotContainer() {
     // Initialize controller first
     driverXbox = new CommandXboxController(ControllerConstants.DRIVER_CONTROLLER_PORT);
+    m_operatorController = new CommandXboxController(1);
     
     // Initialize drive subsystem
     m_DriveSubsystem = new DriveSubsystem(new File(Filesystem.getDeployDirectory(), "SWERVE"));
@@ -49,8 +56,8 @@ public class RobotContainer {
       limelightVision = null;
     }
 
-    // Set initial robot position
-    m_DriveSubsystem.resetOdometry(FieldConstants.BLUE_ALLIANCE_START);
+    // Set initial robot position - START AT ORIGIN FOR TESTING
+    m_DriveSubsystem.resetOdometry(new Pose2d(0.0, 0.0, Rotation2d.kZero));
 
     // Setup autonomous chooser
     autoChooser = new SendableChooser<>();
@@ -64,6 +71,9 @@ public class RobotContainer {
     setupSmartDashboard();
     
     SmartDashboard.putBoolean("Robot/Container Initialized", true);
+    
+    SmartDashboard.putStringArray("Auto/Choices", new String[]{"Simple", "Sequential", "Balance"});
+    SmartDashboard.putString("Auto/Choice", "Simple");
   }
 
   private void setupSmartDashboard() {
@@ -128,8 +138,7 @@ public class RobotContainer {
       m_DriveSubsystem.driveCommand(
         () -> MathUtil.applyDeadband(driverXbox.getLeftY(), DriveConstants.DEADBAND) * speedMultiplier,
         () -> MathUtil.applyDeadband(driverXbox.getLeftX(), DriveConstants.DEADBAND) * speedMultiplier,
-        () -> MathUtil.applyDeadband(driverXbox.getRightX(), DriveConstants.DEADBAND) * speedMultiplier * DriveConstants.ROTATION_SCALE,
-        () -> 0.0
+        () -> MathUtil.applyDeadband(driverXbox.getRightX(), DriveConstants.DEADBAND) * speedMultiplier * DriveConstants.ROTATION_SCALE
       ).withName("DefaultDrive")
     );
   }
@@ -188,8 +197,7 @@ public class RobotContainer {
         m_DriveSubsystem.driveCommand(
           () -> MathUtil.applyDeadband(driverXbox.getLeftY(), DriveConstants.DEADBAND),
           () -> MathUtil.applyDeadband(driverXbox.getLeftX(), DriveConstants.DEADBAND),
-          () -> MathUtil.applyDeadband(driverXbox.getRightX(), DriveConstants.DEADBAND) * DriveConstants.FULL_SPEED_ROTATION_SCALE,
-          () -> 0.0
+          () -> MathUtil.applyDeadband(driverXbox.getRightX(), DriveConstants.DEADBAND) * DriveConstants.FULL_SPEED_ROTATION_SCALE
         ).withName("FullSpeedDrive")
       );
     
@@ -201,8 +209,7 @@ public class RobotContainer {
         m_DriveSubsystem.driveCommand(
           () -> MathUtil.applyDeadband(driverXbox.getLeftY(), DriveConstants.DEADBAND) * DriveConstants.PRECISION_MULTIPLIER,
           () -> MathUtil.applyDeadband(driverXbox.getLeftX(), DriveConstants.DEADBAND) * DriveConstants.PRECISION_MULTIPLIER,
-          () -> MathUtil.applyDeadband(driverXbox.getRightX(), DriveConstants.DEADBAND) * DriveConstants.PRECISION_ROTATION_SCALE,
-          () -> 0.0
+          () -> MathUtil.applyDeadband(driverXbox.getRightX(), DriveConstants.DEADBAND) * DriveConstants.PRECISION_ROTATION_SCALE
         ).withName("PrecisionDrive")
       );
     
@@ -216,10 +223,15 @@ public class RobotContainer {
     // Initialize status
     SmartDashboard.putString("Status/Speed Mode", "Normal");
     SmartDashboard.putString("Status/Last Action", "Ready");
+
+    // Operator diagnostics
+    m_operatorController.a().onTrue(Commands.runOnce(m_DriveSubsystem::printEncoderOffsets));
+    m_operatorController.b().onTrue(Commands.runOnce(m_DriveSubsystem::diagnoseGyro));
   }
   
   /**
    * Get the currently selected autonomous command.
+   * Always ensures robot starts at origin (0, 0).
    */
   private Command getSelectedAutoCommand() {
     try {
@@ -236,24 +248,29 @@ public class RobotContainer {
 
   /**
    * Get the autonomous command to run.
+   * Always ensures robot starts at origin (0, 0).
    */
   public Command getAutonomousCommand() {
-    Command autoCommand = getSelectedAutoCommand();
-    String autoName = autoCommand.getName();
-    SmartDashboard.putString("Status/Auto Selected", autoName);
-    return autoCommand;
+    // Reset to origin before any autonomous
+    m_DriveSubsystem.stop();
+    m_DriveSubsystem.resetOdometry(new Pose2d(0.0, 0.0, Rotation2d.kZero));
+    
+    String autoChoice = SmartDashboard.getString("Auto/Choice", "Simple");
+    System.out.println("[RobotContainer] Selected autonomous: " + autoChoice);
+    
+    return switch(autoChoice) {
+        case "Sequential" -> new SequentialAuto(m_DriveSubsystem);
+        case "Balance" -> new AutoBalance(m_DriveSubsystem);
+        default -> new SimpleAuto(m_DriveSubsystem);
+    };
   }
 
   /**
    * Called when teleop starts.
    */
   public void teleopInit() {
-    // Zero gyro and sync modules when teleop starts to prevent spinning
-    m_DriveSubsystem.zeroGyro();
-    m_DriveSubsystem.synchronizeModuleEncoders();
-    
-    SmartDashboard.putData("Commands", CommandScheduler.getInstance());
-    SmartDashboard.putString("Status/Speed Mode", "Normal");
-    updateSpeedDisplay();
+    // Reset to origin at start of teleop
+    m_DriveSubsystem.resetOdometry(new Pose2d());
+    System.out.println("Teleop initialized - odometry reset");
   }
 }
