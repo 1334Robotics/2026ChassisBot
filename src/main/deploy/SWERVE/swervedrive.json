@@ -1,4 +1,3 @@
-
 {
     "imu": {
       "type": "navx_mxp_serial",
@@ -7,10 +6,10 @@
     },
     "invertedIMU": false,
     "modules": [
-      "frontleft.json",
-      "frontright.json",
-      "backleft.json",
-      "backright.json"
+      "Frontleft.json",
+      "Frontright.json",
+      "Backleft.json",
+      "Backright.json"
     ]
   }
   
