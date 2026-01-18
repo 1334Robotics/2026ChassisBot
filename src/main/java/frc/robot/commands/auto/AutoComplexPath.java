@@ -92,10 +92,10 @@ public class AutoComplexPath extends SequentialCommandGroup {
             // Finish
             Commands.runOnce(() -> {
                 Pose2d finalPose = drive.getPose();
-                System.out.println("[ComplexPath] ✓ Complete at (" + 
+                System.out.println("[ComplexPath] [OK] Complete at (" + 
                     String.format("%.2f, %.2f", finalPose.getX(), finalPose.getY()) + ")");
-                System.out.println("[ComplexPath] ✓ Total pieces scored: 3");
-                System.out.println("[ComplexPath] ✓ Reef branches covered: Front, Left, Right");
+                System.out.println("[ComplexPath] [OK] Total pieces scored: 3");
+                System.out.println("[ComplexPath] [OK] Reef branches covered: Front, Left, Right");
                 drive.stop();
                 drive.lock();
                 System.out.println();

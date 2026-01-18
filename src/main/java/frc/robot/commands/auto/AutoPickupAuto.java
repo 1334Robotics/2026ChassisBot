@@ -55,7 +55,7 @@ public class AutoPickupAuto extends SequentialCommandGroup {
             Commands.runOnce(() -> {
                 drive.stop();
                 drive.lock();
-                System.out.println("[PickupCycles] ✓ Complete - 3 pieces scored\n");
+                System.out.println("[PickupCycles] [OK] Complete - 3 pieces scored\n");
             })
         );
     }
