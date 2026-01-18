@@ -6,20 +6,8 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import frc.robot.Constants.FieldConstants;
 import frc.robot.subsystems.DriveSubsystem;
-
 /**
- * Figure 8 Auto: Drives in a figure 8 pattern around the Reefscape field.
- * Creates two loops that navigate around key field elements:
- * - First loop: Around the reef (right side) - stays clear of reef branches
- * - Second loop: Around coral station area (left side) - avoids station collision
- * Tests path following accuracy and rotation control.
- * 
- * Field Reference:
- * - Reef center: (8.77, 4.105)
- * - Field size: 17.54m x 8.21m
- * - Reef radius: ~1.5m (stay at least 2m away)
- * - Coral stations at field edges
- * - Start safely away from hub/processor near Blue Alliance wall
+ * Figure 8 Auto: Navigate in a figure 8 pattern around field elements.
  */
 public class AutoFigure8 extends SequentialCommandGroup {
     
