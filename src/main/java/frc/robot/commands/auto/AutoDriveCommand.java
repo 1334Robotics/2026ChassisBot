@@ -33,12 +33,11 @@ public class AutoDriveCommand extends Command {
     @Override
     public void initialize() {
         startTime = Timer.getFPGATimestamp();
-        drive.zeroGyro();
         
         Pose2d currentPose = drive.getPose();
         System.out.println("[AutoDriveCommand] Moving from (" + 
-            String.format("%.2f, %.2f", currentPose.getX(), currentPose.getY()) + 
-            ") to (" + String.format("%.2f, %.2f", targetPose.getX(), targetPose.getY()) + ")");
+            String.format("%.2f, %.2f @ %.0f°", currentPose.getX(), currentPose.getY(), currentPose.getRotation().getDegrees()) + 
+            ") to (" + String.format("%.2f, %.2f @ %.0f°", targetPose.getX(), targetPose.getY(), targetPose.getRotation().getDegrees()) + ")");
     }
     
     @Override
@@ -50,12 +49,13 @@ public class AutoDriveCommand extends Command {
         double dy = targetPose.getY() - currentPose.getY();
         double distance = Math.hypot(dx, dy);
         
-        // If close enough to target, just rotate to final heading
+        // Calculate angle error
+        double angleError = normalizeAngle(
+            targetPose.getRotation().getDegrees() - currentPose.getRotation().getDegrees()
+        );
+        
+        // If close enough to target position, focus on rotation
         if (distance < POSITION_TOLERANCE) {
-            double angleError = normalizeAngle(
-                targetPose.getRotation().getDegrees() - currentPose.getRotation().getDegrees()
-            );
-            
             if (Math.abs(angleError) < ANGLE_TOLERANCE) {
                 drive.stop();
                 return;
@@ -76,9 +76,6 @@ public class AutoDriveCommand extends Command {
         double vy = (dy / distance) * speed;
         
         // Also correct heading while moving
-        double angleError = normalizeAngle(
-            targetPose.getRotation().getDegrees() - currentPose.getRotation().getDegrees()
-        );
         double omega = KP_ANGULAR * Math.toRadians(angleError);
         omega = clamp(omega, -Math.PI / 2, Math.PI / 2); // Limit rotation speed
         
@@ -101,11 +98,12 @@ public class AutoDriveCommand extends Command {
         boolean timedOut = (Timer.getFPGATimestamp() - startTime) > timeoutSeconds;
         
         if (atTarget) {
-            System.out.println("[AutoDriveCommand] Reached target");
+            System.out.println("[AutoDriveCommand] ✓ Reached target");
         }
         if (timedOut) {
-            System.out.println("[AutoDriveCommand] Timed out at distance: " + 
-                String.format("%.2f", distance) + "m");
+            System.out.println("[AutoDriveCommand] ⚠ Timed out - distance: " + 
+                String.format("%.2f", distance) + "m, angle error: " + 
+                String.format("%.1f", angleError) + "°");
         }
         
         return atTarget || timedOut;
@@ -114,6 +112,9 @@ public class AutoDriveCommand extends Command {
     @Override
     public void end(boolean interrupted) {
         drive.stop();
+        if (interrupted) {
+            System.out.println("[AutoDriveCommand] ⚠ Interrupted");
+        }
     }
     
     private double normalizeAngle(double angle) {
