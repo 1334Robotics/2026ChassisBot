@@ -22,6 +22,7 @@ import frc.robot.commands.auto.AutoAlgaeAuto;
 import frc.robot.commands.auto.AutoAvoidCollision;
 import frc.robot.commands.auto.AutoBalance;
 import frc.robot.commands.auto.AutoComplexPath;
+import frc.robot.commands.auto.AutoFigure8;
 import frc.robot.commands.auto.AutoPickupAuto;
 import frc.robot.commands.auto.AutoProcessorAuto;
 import frc.robot.commands.auto.AutoSafeScore;
@@ -124,6 +125,7 @@ public class RobotContainer {
     autoChooser.addOption("Complex Path", new AutoComplexPath(m_DriveSubsystem));
     autoChooser.addOption("Balance", new AutoBalance(m_DriveSubsystem));
     autoChooser.addOption("Pickup Cycles", new AutoPickupAuto(m_DriveSubsystem));
+    autoChooser.addOption("Figure 8 Pattern", new AutoFigure8(m_DriveSubsystem));
     
     SmartDashboard.putData("Auto Chooser", autoChooser);
   }
@@ -259,5 +261,5 @@ public class RobotContainer {
     // Reset to Blue Alliance start at teleop begin
     m_DriveSubsystem.resetOdometry(FieldConstants.BLUE_ALLIANCE_START);
     System.out.println("Teleop initialized - odometry reset to Blue Alliance start");
-  }
+  }  
 }
