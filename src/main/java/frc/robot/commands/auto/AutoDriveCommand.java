@@ -98,10 +98,10 @@ public class AutoDriveCommand extends Command {
         boolean timedOut = (Timer.getFPGATimestamp() - startTime) > timeoutSeconds;
         
         if (atTarget) {
-            System.out.println("[AutoDriveCommand] ✓ Reached target");
+            System.out.println("[AutoDriveCommand] [OK] Reached target");
         }
         if (timedOut) {
-            System.out.println("[AutoDriveCommand] ⚠ Timed out - distance: " + 
+            System.out.println("[AutoDriveCommand] [WARN] Timed out - distance: " + 
                 String.format("%.2f", distance) + "m, angle error: " + 
                 String.format("%.1f", angleError) + "°");
         }
@@ -113,7 +113,7 @@ public class AutoDriveCommand extends Command {
     public void end(boolean interrupted) {
         drive.stop();
         if (interrupted) {
-            System.out.println("[AutoDriveCommand] ⚠ Interrupted");
+            System.out.println("[AutoDriveCommand] [WARN] Interrupted");
         }
     }
     
