@@ -74,10 +74,8 @@ public class SwerveModule {
         }
         
         // Use WPILib's optimize method which handles all edge cases correctly
-        SwerveModuleState optimizedState = SwerveModuleState.optimize(
-            desiredState,
-            getState().angle
-        );
+        SwerveModuleState optimizedState = desiredState;
+           optimizedState.optimize(getState().angle);
 
         // Set drive motor power (normalized 0-1)
         driveMotor.set(optimizedState.speedMetersPerSecond / kMaxSpeed);
