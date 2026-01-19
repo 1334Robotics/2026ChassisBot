@@ -20,7 +20,6 @@ import frc.robot.subsystems.DriveSubsystem;
 public class SimpleAuto extends SequentialCommandGroup {
     
     public SimpleAuto(DriveSubsystem drive) {
-        addCommands(
             // Startup diagnostics
             Commands.runOnce(() -> {
                 System.out.println("\n========== SIMPLE AUTO (REEFSCAPE) ==========");
@@ -46,7 +45,7 @@ public class SimpleAuto extends SequentialCommandGroup {
             new AutoDriveCommand(
                 drive,
                 FieldConstants.REEF_FRONT,  // Approaches from front
-                2.5,  // max speed (m/s)
+                newMaxSpeed,  // max speed (m/s)
                 8.0   // timeout
             ),
             
@@ -70,13 +69,12 @@ public class SimpleAuto extends SequentialCommandGroup {
             
             // Finish
             Commands.runOnce(() -> {
-                Pose2d finalPose = drive.getPose();
+                String finalPose = drive.getPose();
                 System.out.println("[SimpleAuto] Complete at (" + 
                     String.format("%.2f, %.2f", finalPose.getX(), finalPose.getY()) + ")");
                 drive.stop();
                 drive.lock();
-                System.out.println();
+                System.out.println()
             })
-        );
+        ;
     }
-}

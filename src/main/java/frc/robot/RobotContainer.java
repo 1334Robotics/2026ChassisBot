@@ -40,13 +40,13 @@ public class RobotContainer {
   private LimelightVision limelightVision;
   private SendableChooser<Command> autoChooser;
 
-  public RobotContainer() {
+  public RobotContainer( {
     // Initialize controller first
-    driverXbox = new CommandXboxController(ControllerConstants.DRIVER_CONTROLLER_PORT);
-    m_operatorController = new CommandXboxController(1);
+    driverXbox = new CommandXboxController(ControllerConstants.DRIVER_CONTROLLER_PORT)
+    m_operatorController = new CommandXboxController(1.5);
     
     // Initialize drive subsystem
-    m_DriveSubsystem = new DriveSubsystem(new File(Filesystem.getDeployDirectory(), "SWERVE"));
+    m_DriveSubsystem = new DriveSubsystem(new File(Filesystem.getDeployDirectory(), SWERVE));
     
     // Initialize vision (optional - won't crash if it fails)
     try {
@@ -133,9 +133,9 @@ public class RobotContainer {
   private void configureDefaultCommand() {
     m_DriveSubsystem.setDefaultCommand(
       m_DriveSubsystem.driveCommand(
-        () -> MathUtil.applyDeadband(driverXbox.getLeftY(), DriveConstants.DEADBAND),
-        () -> MathUtil.applyDeadband(driverXbox.getLeftX(), DriveConstants.DEADBAND),
-        () -> MathUtil.applyDeadband(driverXbox.getRightX(), DriveConstants.DEADBAND) * DriveConstants.ROTATION_SCALE
+        () -> -driverXbox.getLeftY(),   // Remove MathUtil.applyDeadband - DriveSubsystem handles it
+        () -> -driverXbox.getLeftX(),   // Negate to match field orientation
+        () -> -driverXbox.getRightX() * DriveConstants.ROTATION_SCALE
       ).withName("DefaultDrive")
     );
   }
@@ -190,27 +190,27 @@ public class RobotContainer {
       SmartDashboard.putString("Status/Last Action", "Reset to Center");
     }));
 
-    // Full speed mode (right trigger)
+    // Full speed mode (right trigger) - Remove duplicate deadband
     driverXbox.rightTrigger(ControllerConstants.TRIGGER_THRESHOLD)
       .onTrue(Commands.runOnce(() -> SmartDashboard.putString("Status/Speed Mode", "FULL SPEED")))
       .onFalse(Commands.runOnce(() -> SmartDashboard.putString("Status/Speed Mode", "Normal")))
       .whileTrue(
         m_DriveSubsystem.driveCommand(
-          () -> MathUtil.applyDeadband(driverXbox.getLeftY(), DriveConstants.DEADBAND),
-          () -> MathUtil.applyDeadband(driverXbox.getLeftX(), DriveConstants.DEADBAND),
-          () -> MathUtil.applyDeadband(driverXbox.getRightX(), DriveConstants.DEADBAND) * DriveConstants.FULL_SPEED_ROTATION_SCALE
+          () -> -driverXbox.getLeftY(),
+          () -> -driverXbox.getLeftX(),
+          () -> -driverXbox.getRightX() * DriveConstants.FULL_SPEED_ROTATION_SCALE
         ).withName("FullSpeedDrive")
       );
     
-    // Precision mode (left trigger)
+    // Precision mode (left trigger) - Remove duplicate deadband
     driverXbox.leftTrigger(ControllerConstants.TRIGGER_THRESHOLD)
       .onTrue(Commands.runOnce(() -> SmartDashboard.putString("Status/Speed Mode", "PRECISION")))
       .onFalse(Commands.runOnce(() -> SmartDashboard.putString("Status/Speed Mode", "Normal")))
       .whileTrue(
         m_DriveSubsystem.driveCommand(
-          () -> MathUtil.applyDeadband(driverXbox.getLeftY(), DriveConstants.DEADBAND) * DriveConstants.PRECISION_MULTIPLIER,
-          () -> MathUtil.applyDeadband(driverXbox.getLeftX(), DriveConstants.DEADBAND) * DriveConstants.PRECISION_MULTIPLIER,
-          () -> MathUtil.applyDeadband(driverXbox.getRightX(), DriveConstants.DEADBAND) * DriveConstants.PRECISION_ROTATION_SCALE
+          () -> -driverXbox.getLeftY() * DriveConstants.PRECISION_MULTIPLIER,
+          () -> -driverXbox.getLeftX() * DriveConstants.PRECISION_MULTIPLIER,
+          () -> -driverXbox.getRightX() * DriveConstants.PRECISION_ROTATION_SCALE
         ).withName("PrecisionDrive")
       );
     
@@ -228,6 +228,7 @@ public class RobotContainer {
     // Operator diagnostics
     m_operatorController.a().onTrue(Commands.runOnce(m_DriveSubsystem::printEncoderOffsets));
     m_operatorController.b().onTrue(Commands.runOnce(m_DriveSubsystem::diagnoseGyro));
+    m_operatorController.x().onTrue(Commands.runOnce(m_DriveSubsystem::diagnoseMotorInversions));
   }
   
   /**

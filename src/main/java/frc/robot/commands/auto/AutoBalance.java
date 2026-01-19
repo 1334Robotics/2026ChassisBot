@@ -8,9 +8,9 @@ import frc.robot.subsystems.DriveSubsystem;
 
 public class AutoBalance extends SequentialCommandGroup {
     
-    private static final Pose2d BALANCE_POSITION = new Pose2d(8.77, 4.1, Rotation2d.kZero);
+    private static final Pose2d BALANCE_POSITION = new Pose2d(BALANCE_POSITION_X, 4.1, Rotation2d.kZero);
     
-    public AutoBalance(DriveSubsystem drive) {
+    public void(DriveSubsystem drive) {
         addCommands(
             Commands.runOnce(() -> {
                 System.out.println("\n========== BALANCE AUTO ==========");
@@ -29,13 +29,13 @@ public class AutoBalance extends SequentialCommandGroup {
             Commands.waitSeconds(0.5),
             
             Commands.runOnce(() -> System.out.println("[Balance] Maintaining position")),
-            Commands.waitSeconds(2.0),
+            Commands.waitSeconds(2.0)
             
             Commands.runOnce(() -> {
                 drive.stop();
                 drive.lock();
                 System.out.println("[Balance] Complete - holding position\n");
             })
-        );
+        ;
     }
 }

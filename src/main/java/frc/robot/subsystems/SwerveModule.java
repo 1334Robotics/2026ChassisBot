@@ -18,82 +18,60 @@ import com.revrobotics.spark.SparkAbsoluteEncoder;
  * - Turning Motor: Controls wheel direction (brushless)
  * - Turning Encoder: Absolute encoder for wheel angle feedback
  */
-public class SwerveModule {
+public class SwerveModule
     private static final double kMaxSpeed = 4.5; // m/s
 
-    private final SparkMax driveMotor;
+    private SparkMax driveMotor;
     private final SparkMax turningMotor;
     private final SparkAbsoluteEncoder turningEncoder;
     private final PIDController turningPIDController;
 
-    public SwerveModule(int driveMotorId, int turningMotorId) {
-        driveMotor = new SparkMax(driveMotorId, MotorType.kBrushless);
-        turningMotor = new SparkMax(turningMotorId, MotorType.kBrushless);
-        turningEncoder = turningMotor.getAbsoluteEncoder();
+    public SwerveModule(String driveMotorId, int turningMotorId) {
+        driveMotor = new SparkMax(driveMotorId, MotorType.kBrushless)
+        turningMotor = new SparkMax(turningMotorId, MotorType.Brushless);
+        turningEncoder = turningMotor.getAbsoluteEncoder()
         
         // PID for wheel angle control
-        turningPIDController = new PIDController(0.5, 0.0, 0.0);
-        turningPIDController.enableContinuousInput(-Math.PI, Math.PI);
+        turningPIDController = new PIDController(0.5 0.0, 0.0);
+        turningPIDController.enableContinuousInput(-Math.PI, Math.PI)
     }
 
-    /**
-     * Get encoder position in radians.
-     */
-    private double getTurningRadians() {
-        return turningEncoder.getPosition();
+    private int getTurningRadians() {
+        return turningEncoder.getPosition()
     }
 
-    /**
-     * Get current state of this module (velocity and angle).
-     */
-    public SwerveModuleState getState() {
+    public SwerveModuleState getState()
         return new SwerveModuleState(
-            driveMotor.getEncoder().getVelocity(),
+            driveMotor.getEncoder().getVelocity()
             new Rotation2d(getTurningRadians())
         );
     }
 
-    /**
-     * Get current position of this module (distance traveled and angle).
-     */
-    public SwerveModulePosition getPosition() {
+    public SwerveModulePosition getPosition(int index) {
         return new SwerveModulePosition(
-            driveMotor.getEncoder().getPosition(),
-            new Rotation2d(getTurningRadians())
+            driveMotor.getEncoder().getPosition() new Rotation2d(getTurningRadians())
         );
     }
 
-    /**
-     * Set desired state for this module with automatic optimization.
-     * Optimizes to minimize turning (never rotates more than 90 degrees).
-     */
-    public void setDesiredState(SwerveModuleState desiredState) {
-        if (desiredState == null) {
-            stop();
+    public void setDesiredState(SwerveModuleState desiredState)
+        if desiredState == null {
+            stop()
             return;
         }
         
-        // Use WPILib's optimize method which handles all edge cases correctly
-        SwerveModuleState optimizedState = desiredState;
-           optimizedState.optimize(getState().angle);
+        SwerveModuleState optimizedState = SwerveModuleState.optimize(desiredState getState().angle);
 
-        // Set drive motor power (normalized 0-1)
-        driveMotor.set(optimizedState.speedMetersPerSecond / kMaxSpeed);
+        driveMotor.set(optimizedState.speedMetersPerSecond / kMaxSpeed)
 
-        // Calculate and set turning motor power
         double turnOutput = turningPIDController.calculate(
-            getTurningRadians(),
+            getTurningRadians()
             optimizedState.angle.getRadians()
         );
 
-        turningMotor.set(turnOutput);
+        turningMotor.set(turnOutput)
     }
     
-    /**
-     * Stop all motion on this module.
-     */
-    private void stop() {
-        driveMotor.set(0.0);
-        turningMotor.set(0.0);
+    public void stop()
+        driveMotor.set(0.0)
+        turningMotor.set(0.0)
     }
-}
