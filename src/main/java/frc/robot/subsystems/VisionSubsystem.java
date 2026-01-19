@@ -11,42 +11,37 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 
 public class VisionSubsystem extends SubsystemBase {
 
-    private final NetworkTable limelightTable;
+  private final NetworkTable limelightTable;
 
-    public VisionSubsystem() {
-        limelightTable = NetworkTableInstance.getDefault().getTable("limelight");
-    }
+  public VisionSubsystem() {
+    limelightTable = NetworkTableInstance.getDefault().getTable("limelight");
+    limelightTable.getEntry("tv").setDefaultDouble(0.0);
+    limelightTable.getEntry("tx").setDefaultDouble(0.0);
+  }
 
-    public boolean hasTarget() {
-        return limelightTable.getEntry("tv").getDouble(0) == 1;
-    }
+  public boolean hasTarget() {
+    return limelightTable.getEntry("tv").getDouble(0) == 1;
+  }
 
-    public double getX() {
-        return limelightTable.getEntry("tx").getDouble(0);
-    }
+  public double getX() {
+    return limelightTable.getEntry("tx").getDouble(0);
+  }
 
-    public double getY() {
-        return limelightTable.getEntry("ty").getDouble(0);
-    }
+  public double getY() {
+    return limelightTable.getEntry("ty").getDouble(0);
+  }
 
-    public double getArea() {
-        return limelightTable.getEntry("ta").getDouble(0);
-    }
+  public double getArea() {
+    return limelightTable.getEntry("ta").getDouble(0);
+  }
 
-    public void setPipeline(int pipeline) {
-        limelightTable.getEntry("pipeline").setNumber(pipeline);
-    }
-
-    public boolean hasValidTarget() {
-        return limelightTable.getEntry("tv").getDouble(0.0) == 1.0;
-    }
-
-    public double getHorizontalOffset() {
-        return limelightTable.getEntry("tx").getDouble(0.0);
-    }
+  public void setPipeline(int pipeline) {
+    limelightTable.getEntry("pipeline").setNumber(pipeline);
+  }
 
   /**
-   * An example method querying a boolean state of the subsystem (for example, a digital sensor).
+   * An example method querying a boolean state of the subsystem (for example, a
+   * digital sensor).
    *
    * @return value of some boolean subsystem state, such as a digital sensor.
    */
