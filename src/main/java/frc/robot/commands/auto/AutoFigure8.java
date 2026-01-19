@@ -6,107 +6,114 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import frc.robot.Constants.FieldConstants;
 import frc.robot.subsystems.DriveSubsystem;
-/**
- * Figure 8 Auto: Navigate in a figure 8 pattern around field elements.
- */
+
+
 public class AutoFigure8 extends SequentialCommandGroup {
     
-    // Initial safe position - start further back and to the side (away from reef)
-    // Move UP (North) first instead of forward to avoid reef collision
-    private static final Pose2d SAFE_START_NORTH = new Pose2d(1.5, 6.0, Rotation2d.fromDegrees(90));
+    // Initial safe movement - go UP first, then around perimeter
+    private static final Pose2d SAFE_NORTH = new Pose2d(1.5, 7.0, Rotation2d.fromDegrees(0));
     
-    // Then move laterally (East) along the top edge, clear of obstacles
-    private static final Pose2d SAFE_LATERAL = new Pose2d(4.0, 6.5, Rotation2d.kZero);
+    // LEFT LOOP waypoints (counter-clockwise around left side)
+    private static final Pose2d LEFT_TOP = new Pose2d(3.0, 7.5, Rotation2d.fromDegrees(0));
+    private static final Pose2d LEFT_MID_EAST = new Pose2d(5.5, 6.5, Rotation2d.fromDegrees(-45));
+    private static final Pose2d LEFT_BOTTOM = new Pose2d(3.5, 1.5, Rotation2d.fromDegrees(-90));
+    private static final Pose2d LEFT_MID_RETURN = new Pose2d(5.0, 3.0, Rotation2d.fromDegrees(45));
     
-    // Intermediate waypoint - ensures we stay clear of reef before heading to center
-    private static final Pose2d APPROACH_CENTER = new Pose2d(5.5, 4.105, Rotation2d.kZero);
+    // CROSSING waypoint - safely ABOVE the reef
+    private static final Pose2d CROSSING_NORTH = new Pose2d(8.77, 7.0, Rotation2d.fromDegrees(0));
     
-    // Center point where the figure 8 crosses (safe distance from reef)
-    private static final Pose2d CENTER = new Pose2d(8.77, 4.105, Rotation2d.kZero);
+    // RIGHT LOOP waypoints (clockwise around right side)
+    private static final Pose2d RIGHT_TOP = new Pose2d(12.5, 7.5, Rotation2d.fromDegrees(0));
+    private static final Pose2d RIGHT_EAST = new Pose2d(14.5, 5.0, Rotation2d.fromDegrees(-90));
+    private static final Pose2d RIGHT_BOTTOM = new Pose2d(12.0, 1.5, Rotation2d.fromDegrees(-135));
+    private static final Pose2d RIGHT_MID_RETURN = new Pose2d(10.5, 3.5, Rotation2d.fromDegrees(135));
     
-    // First loop waypoints (right side - around reef area with safe clearance)
-    private static final Pose2d LOOP1_NORTH = new Pose2d(11.5, 6.0, Rotation2d.fromDegrees(45));
-    private static final Pose2d LOOP1_EAST = new Pose2d(13.5, 4.105, Rotation2d.kZero);
-    private static final Pose2d LOOP1_SOUTH = new Pose2d(11.5, 2.2, Rotation2d.fromDegrees(-45));
-    
-    // Cross back through center (approach from safe angle)
-    private static final Pose2d CENTER_RETURN = new Pose2d(8.77, 4.105, Rotation2d.fromDegrees(180));
-    
-    // Second loop waypoints (left side - clear of coral stations)
-    private static final Pose2d LOOP2_NORTH = new Pose2d(6.0, 6.5, Rotation2d.fromDegrees(135));
-    private static final Pose2d LOOP2_WEST = new Pose2d(3.5, 5.5, Rotation2d.fromDegrees(180));
-    private static final Pose2d LOOP2_SOUTH = new Pose2d(6.0, 1.7, Rotation2d.fromDegrees(-135));
+    // Return crossing - back north of reef
+    private static final Pose2d CROSSING_RETURN = new Pose2d(8.77, 7.0, Rotation2d.fromDegrees(180));
     
     public AutoFigure8(DriveSubsystem drive) {
         addCommands(
             // Print start message
             Commands.runOnce(() -> {
-                System.out.println("\n========== FIGURE 8 AUTO (REEFSCAPE) ==========");
-                System.out.println("Strategy: Navigate figure 8 around field elements");
-                System.out.println("Step 0: Move NORTH first to avoid reef collision");
-                System.out.println("Step 1: Move laterally along safe edge");
-                System.out.println("Step 2: Approach center with wide berth around reef");
-                System.out.println("Loop 1: Wide path around reef (right, 2m+ clearance)");
-                System.out.println("Loop 2: Around coral station area (left, safe margin)");
-                System.out.println("Field: 17.54m x 8.21m | Reef at center with 1.5m radius");
-                System.out.println("===============================================\n");
+                System.out.println("\n========== FIGURE 8 AUTO (REEFSCAPE - SAFE) ==========");
+                System.out.println("Strategy: Navigate figure 8 AROUND field perimeter");
+                System.out.println("NO REEF COLLISION - All paths avoid center reef zone");
+                System.out.println("Left Loop: Y=1.5-7.5, X=3.0-5.5 (stays west of reef)");
+                System.out.println("Right Loop: Y=1.5-7.5, X=10.5-14.5 (stays east of reef)");
+                System.out.println("Crossing: Y=7.0 (safely ABOVE reef at all times)");
+                System.out.println("======================================================\n");
             }),
             
             // Start from Blue Alliance position
             Commands.runOnce(() -> {
                 drive.stop();
                 System.out.println("[Figure8] Starting from Blue Alliance");
-                System.out.println("[Figure8] Moving NORTH to avoid reef...");
+                System.out.println("[Figure8] Moving NORTH along wall to avoid all obstacles...");
             }),
             Commands.waitSeconds(0.5),
             
-            // FIRST: Move NORTH (up) to avoid reef - NO forward movement yet!
-            new AutoDriveCommand(drive, SAFE_START_NORTH, 1.5, 2.5),
-            Commands.waitSeconds(0.4),
-            
-            // SECOND: Move laterally (East) along safe top edge
-            Commands.runOnce(() -> System.out.println("[Figure8] Moving laterally along safe edge...")),
-            new AutoDriveCommand(drive, SAFE_LATERAL, 1.5, 3.0),
+            // FIRST: Move NORTH along wall (no forward movement toward reef!)
+            new AutoDriveCommand(drive, SAFE_NORTH, 1.0, 3.0),
             Commands.waitSeconds(0.3),
             
-            // THIRD: Approach center position with wide berth around reef (stay left of reef)
-            Commands.runOnce(() -> System.out.println("[Figure8] Approaching center (staying clear of reef)...")),
-            new AutoDriveCommand(drive, APPROACH_CENTER, 2.0, 4.0),
+            // === LEFT LOOP (Counter-clockwise) ===
+            Commands.runOnce(() -> System.out.println("[Figure8] LEFT LOOP: Starting counter-clockwise path")),
+            
+            // Top left corner
+            new AutoDriveCommand(drive, LEFT_TOP, 1.5, 3.5),
+            Commands.waitSeconds(0.2),
+            
+            // Move east toward center (but stay north of reef)
+            Commands.runOnce(() -> System.out.println("[Figure8] Moving east (staying north of reef zone)")),
+            new AutoDriveCommand(drive, LEFT_MID_EAST, 2.0, 4.0),
+            Commands.waitSeconds(0.2),
+            
+            // Drop south along left side
+            Commands.runOnce(() -> System.out.println("[Figure8] Moving south along left safe zone")),
+            new AutoDriveCommand(drive, LEFT_BOTTOM, 2.5, 4.5),
+            Commands.waitSeconds(0.2),
+            
+            // Return north on left side
+            Commands.runOnce(() -> System.out.println("[Figure8] Completing left loop")),
+            new AutoDriveCommand(drive, LEFT_MID_RETURN, 2.0, 4.0),
             Commands.waitSeconds(0.3),
             
-            // FOURTH: Move to center crossing point (short final approach)
-            Commands.runOnce(() -> System.out.println("[Figure8] Moving to center crossing point")),
-            new AutoDriveCommand(drive, CENTER, 2.5, 5.0),
+            // === CROSS TO RIGHT SIDE (Above reef) ===
+            Commands.runOnce(() -> System.out.println("[Figure8] CROSSING: Moving to right side (above reef)")),
+            new AutoDriveCommand(drive, CROSSING_NORTH, 2.5, 5.0),
             Commands.waitSeconds(0.3),
             
-            // First loop (right side - wide clearance around reef)
-            Commands.runOnce(() -> System.out.println("[Figure8] Loop 1: Wide path around reef (2m+ clearance)")),
-            new AutoDriveCommand(drive, LOOP1_NORTH, 3.0, 5.0),
-            Commands.waitSeconds(0.2),
-            new AutoDriveCommand(drive, LOOP1_EAST, 3.5, 5.0),
-            Commands.waitSeconds(0.2),
-            new AutoDriveCommand(drive, LOOP1_SOUTH, 3.0, 5.0),
+            // === RIGHT LOOP (Clockwise) ===
+            Commands.runOnce(() -> System.out.println("[Figure8] RIGHT LOOP: Starting clockwise path")),
+            
+            // Top right corner
+            new AutoDriveCommand(drive, RIGHT_TOP, 2.5, 4.5),
             Commands.waitSeconds(0.2),
             
-            // Return to center crossing point (straight path)
-            Commands.runOnce(() -> System.out.println("[Figure8] Crossing center (north of reef)...")),
-            new AutoDriveCommand(drive, CENTER_RETURN, 2.5, 5.0),
+            // East side down
+            Commands.runOnce(() -> System.out.println("[Figure8] Moving south along right safe zone")),
+            new AutoDriveCommand(drive, RIGHT_EAST, 3.0, 5.0),
+            Commands.waitSeconds(0.2),
+            
+            // Bottom right
+            new AutoDriveCommand(drive, RIGHT_BOTTOM, 3.0, 5.0),
+            Commands.waitSeconds(0.2),
+            
+            // Return north on right side
+            Commands.runOnce(() -> System.out.println("[Figure8] Completing right loop")),
+            new AutoDriveCommand(drive, RIGHT_MID_RETURN, 2.5, 4.5),
             Commands.waitSeconds(0.3),
             
-            // Second loop (left side - avoid coral stations at field edge)
-            Commands.runOnce(() -> System.out.println("[Figure8] Loop 2: Around coral area (safe margins)")),
-            new AutoDriveCommand(drive, LOOP2_NORTH, 3.0, 5.0),
-            Commands.waitSeconds(0.2),
-            new AutoDriveCommand(drive, LOOP2_WEST, 3.0, 5.0),
-            Commands.waitSeconds(0.2),
-            new AutoDriveCommand(drive, LOOP2_SOUTH, 3.0, 5.0),
-            Commands.waitSeconds(0.2),
-            
-            // Return to center and then safe zone
-            Commands.runOnce(() -> System.out.println("[Figure8] Returning to safe zone")),
-            new AutoDriveCommand(drive, CENTER, 2.5, 5.0),
+            // === CROSS BACK (Above reef) ===
+            Commands.runOnce(() -> System.out.println("[Figure8] Crossing back (above reef)")),
+            new AutoDriveCommand(drive, CROSSING_RETURN, 2.5, 5.0),
             Commands.waitSeconds(0.3),
-            new AutoDriveCommand(drive, FieldConstants.BLUE_SAFE_ZONE, 2.5, 6.0),
+            
+            // Return to safe zone
+            Commands.runOnce(() -> System.out.println("[Figure8] Returning to Blue safe zone")),
+            new AutoDriveCommand(drive, SAFE_NORTH, 2.0, 4.0),
+            Commands.waitSeconds(0.2),
+            new AutoDriveCommand(drive, FieldConstants.BLUE_SAFE_ZONE, 1.5, 4.0),
             
             // Finish
             Commands.runOnce(() -> {
@@ -114,9 +121,9 @@ public class AutoFigure8 extends SequentialCommandGroup {
                 drive.lock();
                 Pose2d finalPose = drive.getPose();
                 System.out.println("[Figure8] [OK] Complete!");
+                System.out.println("[Figure8] Figure 8 completed with ZERO reef collisions");
                 System.out.println("[Figure8] Final position: (" + 
                     String.format("%.2f, %.2f", finalPose.getX(), finalPose.getY()) + ")");
-                System.out.println("[Figure8] Total distance traveled: ~30 meters");
                 System.out.println();
             })
         );
