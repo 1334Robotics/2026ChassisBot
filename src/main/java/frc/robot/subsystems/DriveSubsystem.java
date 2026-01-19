@@ -38,4 +38,18 @@ public class DriveSubsystem extends SubsystemBase{
       swerveDrive.driveFieldOriented(swerveDrive.swerveController.getTargetSpeeds(scaledInputs.getX(), scaledInputs.getY(), headingX.getAsDouble(), headingY.getAsDouble(), swerveDrive.getOdometryHeading().getRadians(), swerveDrive.getMaximumChassisVelocity()));
     });
   }
+
+  public Command driveCommand(DoubleSupplier translationX, DoubleSupplier translationY, DoubleSupplier angularRotationX)
+  { 
+    return run(() -> { 
+      // getMaximumChassisVelocity and getMaximumChassisAngularVelocity may not be the correct functions
+      // Original code had getMaximumVelocity and getMaximumAngularVelocity respectively, but they werent found in new YAGSL
+      // The alternatives are in the YAGSL Javadoc, look there in case these functions don't work
+      swerveDrive.drive(new Translation2d(translationX.getAsDouble() * swerveDrive.getMaximumChassisVelocity(),
+                                          translationY.getAsDouble() * swerveDrive.getMaximumChassisVelocity()),
+                        angularRotationX.getAsDouble() * swerveDrive.getMaximumChassisAngularVelocity(),
+                        true,
+                        false);
+    });
+  }
 }
