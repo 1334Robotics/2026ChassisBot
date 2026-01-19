@@ -15,19 +15,27 @@ public class AutoDriveCommand extends Command {
     private final Pose2d targetPose;
     private final double maxSpeed;
     private final double timeoutSeconds;
+    private final double positionTolerance;
     private double startTime;
     
-    private static final double POSITION_TOLERANCE = 0.20; // meters
+    private static final double DEFAULT_POSITION_TOLERANCE = 0.20; // meters
     private static final double ANGLE_TOLERANCE = 15.0; // degrees
     private static final double KP_LINEAR = 2.0;
     private static final double KP_ANGULAR = 1.5;
+    private static final double MIN_SPEED = 0.3; // m/s
     
-    public AutoDriveCommand(DriveSubsystem drive, Pose2d targetPose, double maxSpeed, double timeoutSeconds) {
+    public AutoDriveCommand(DriveSubsystem drive, Pose2d targetPose, double positionTolerance, double maxSpeed, double timeoutSeconds) {
         this.drive = drive;
         this.targetPose = targetPose;
+        this.positionTolerance = positionTolerance;
         this.maxSpeed = maxSpeed;
         this.timeoutSeconds = timeoutSeconds;
         addRequirements(drive);
+    }
+    
+    // Convenience constructor with default tolerance
+    public AutoDriveCommand(DriveSubsystem drive, Pose2d targetPose, double maxSpeed, double timeoutSeconds) {
+        this(drive, targetPose, DEFAULT_POSITION_TOLERANCE, maxSpeed, timeoutSeconds);
     }
     
     @Override
@@ -35,9 +43,12 @@ public class AutoDriveCommand extends Command {
         startTime = Timer.getFPGATimestamp();
         
         Pose2d currentPose = drive.getPose();
+        double distance = currentPose.getTranslation().getDistance(targetPose.getTranslation());
+        
         System.out.println("[AutoDriveCommand] Moving from (" + 
-            String.format("%.2f, %.2f @ %.0f°", currentPose.getX(), currentPose.getY(), currentPose.getRotation().getDegrees()) + 
-            ") to (" + String.format("%.2f, %.2f @ %.0f°", targetPose.getX(), targetPose.getY(), targetPose.getRotation().getDegrees()) + ")");
+            String.format("%.2f, %.2f @ %.0f deg", currentPose.getX(), currentPose.getY(), currentPose.getRotation().getDegrees()) + 
+            ") to (" + String.format("%.2f, %.2f @ %.0f deg", targetPose.getX(), targetPose.getY(), targetPose.getRotation().getDegrees()) + 
+            ") | Distance: " + String.format("%.2fm", distance));
     }
     
     @Override
@@ -55,7 +66,7 @@ public class AutoDriveCommand extends Command {
         );
         
         // If close enough to target position, focus on rotation
-        if (distance < POSITION_TOLERANCE) {
+        if (distance < positionTolerance) {
             if (Math.abs(angleError) < ANGLE_TOLERANCE) {
                 drive.stop();
                 return;
@@ -69,15 +80,15 @@ public class AutoDriveCommand extends Command {
         
         // Calculate speed toward target with proportional control
         double speed = Math.min(KP_LINEAR * distance, maxSpeed);
-        speed = Math.max(0.3, speed); // Minimum speed
+        speed = Math.max(MIN_SPEED, speed); // Minimum speed to overcome friction
         
         // Normalize direction vector and apply speed
         double vx = (dx / distance) * speed;
         double vy = (dy / distance) * speed;
         
-        // Also correct heading while moving
+        // Also correct heading while moving (but limit rotation to avoid instability)
         double omega = KP_ANGULAR * Math.toRadians(angleError);
-        omega = clamp(omega, -Math.PI / 2, Math.PI / 2); // Limit rotation speed
+        omega = clamp(omega, -Math.PI / 2, Math.PI / 2);
         
         // Send velocities to drive (field-oriented)
         drive.driveFieldOriented(new ChassisSpeeds(vx, vy, omega));
@@ -86,15 +97,13 @@ public class AutoDriveCommand extends Command {
     @Override
     public boolean isFinished() {
         Pose2d currentPose = drive.getPose();
-        double dx = targetPose.getX() - currentPose.getX();
-        double dy = targetPose.getY() - currentPose.getY();
-        double distance = Math.hypot(dx, dy);
+        double distance = currentPose.getTranslation().getDistance(targetPose.getTranslation());
         
         double angleError = Math.abs(normalizeAngle(
             targetPose.getRotation().getDegrees() - currentPose.getRotation().getDegrees()
         ));
         
-        boolean atTarget = distance < POSITION_TOLERANCE && angleError < ANGLE_TOLERANCE;
+        boolean atTarget = distance < positionTolerance && angleError < ANGLE_TOLERANCE;
         boolean timedOut = (Timer.getFPGATimestamp() - startTime) > timeoutSeconds;
         
         if (atTarget) {
@@ -103,7 +112,7 @@ public class AutoDriveCommand extends Command {
         if (timedOut) {
             System.out.println("[AutoDriveCommand] [WARN] Timed out - distance: " + 
                 String.format("%.2f", distance) + "m, angle error: " + 
-                String.format("%.1f", angleError) + "°");
+                String.format("%.1f", angleError) + " deg");
         }
         
         return atTarget || timedOut;
