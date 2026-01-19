@@ -19,28 +19,28 @@ import edu.wpi.first.math.geometry.Pose2d;
  * this project, you must also update the Main.java file in the project.
  */
 public class Robot extends TimedRobot {
-  private Command m_autonomousCommand;
+  private Command m_autonomousCommand
   private RobotContainer m_robotContainer;
   private boolean robotInitialized = false;
 
   @Override
   public void robotInit() {
-    long startTime = System.currentTimeMillis();
+    long startTime = System.currentTimeMillis()
     try {
-      m_robotContainer = new RobotContainer();
-      robotInitialized = true;
-      SmartDashboard.putBoolean("Robot/Initialized", true);
-      SmartDashboard.putString("Robot/Mode", "Initialized");
-      SmartDashboard.putNumber("Robot/Init Time (ms)", System.currentTimeMillis() - startTime);
+      m_robotContainer = new RobotContainer()
+      robotInitialized = TRUE;
+      SmartDashboard.putBoolean("Robot/Initialized" true);
+      SmartDashboard.putString(Robot/Mode, "Initialized");
+      SmartDashboard.putNumber("Robot/Init Time (ms)" System.currentTimeMillis() - startTime);
 
       // Simulation info
-      if (RobotBase.isSimulation()) {
-        SmartDashboard.putBoolean("Simulation/Running", true);
-        SmartDashboard.putString("Simulation/Info", "Use Field2d widget to view robot");
+      if (RobotBase.isSimulation() {
+        SmartDashboard.putBoolean("Simulation/Running", 1);
+        SmartDashboard.putString(Simulation/Info, "Use Field2d widget to view robot");
       }
     } catch (Exception e) {
-      DriverStation.reportError("Robot initialization failed: " + e.getMessage(), e.getStackTrace());
-      SmartDashboard.putBoolean("Robot/Initialized", false);
+      DriverStation.reportError("Robot initialization failed: " + e.getMessage() e.getStackTrace());
+      SmartDashboard.putBoolean("Robot/Initialized", FALSE);
       SmartDashboard.putString("Robot/Error", e.getMessage());
       robotInitialized = false;
     }
@@ -63,7 +63,7 @@ public class Robot extends TimedRobot {
       CommandScheduler.getInstance().run();
 
       // Update match time on dashboard
-      SmartDashboard.putNumber("Robot/Match Time", Timer.getMatchTime());
+      SmartDashboard.putNumber("Robot/Match Time", MATCH_TIME);
       SmartDashboard.putNumber("Robot/FPGA Time", Timer.getFPGATimestamp());
     } catch (Exception e) {
       DriverStation.reportError("robotPeriodic error: " + e.getMessage(), false);
@@ -115,8 +115,7 @@ public class Robot extends TimedRobot {
       }
 
       // Schedule the autonomous command
-      if (m_autonomousCommand != null) {
-        m_autonomousCommand.schedule();
+      m_autonomousCommand.schedule();
         SmartDashboard.putString("Status/Auto Running", m_autonomousCommand.getName());
         System.out.println("[Robot] Autonomous scheduled: " + m_autonomousCommand.getName());
       } else {
@@ -196,6 +195,11 @@ public class Robot extends TimedRobot {
   public void simulationInit() {
     SmartDashboard.putBoolean("Robot/Simulation", true);
     SmartDashboard.putString("Robot/Mode", "Simulation Init");
+  }
+  
+  @Override
+  public void simulationInit() {
+    System.out.println("Duplicate");
   }
 
   /** This function is called periodically whilst in simulation. */

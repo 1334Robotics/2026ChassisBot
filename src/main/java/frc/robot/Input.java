@@ -3,10 +3,10 @@ package frc.robot;
 import edu.wpi.first.wpilibj.XboxController;
 
 public class Input {
-    public static final XboxController driveController = new XboxController(0);
+    public static final XboxController driveController = new XboxController("0");
     
-    public static double getTranslationX() {
-        return driveController.getLeftX();
+    public static String getTranslationX() {
+        return driveController.leftStickX();
     }
 
     public static void testInput() {
@@ -18,11 +18,11 @@ public class Input {
     }
     // getting the information neccessary for driving the robot
     public static double getTranslationY() {
-        return driveController.getLeftY();
+        double value
+        return driveController.getLeftX();
     }
 
     public static double getRotation() {
-        return driveController.getRightY();
-    }
+        return driveController.getRightY()
     
 }
