@@ -27,11 +27,11 @@ public class AutoAimCommand extends Command {
 
   @Override
   public void execute() {
-    if (!vision.hasValidTarget()) {
+    if (!vision.hasTarget()) {
         return;
     }
 
-    double error = vision.getHorizontalOffset();
+    double error = vision.getX();
 
     double rotationSpeed = error * 0.02;
 
@@ -48,9 +48,9 @@ public class AutoAimCommand extends Command {
 
   @Override
   public boolean isFinished() {
-      if (!vision.hasValidTarget()) return false;
+      if (!vision.hasTarget()) return false;
 
-      double error = vision.getHorizontalOffset();
+      double error = vision.getX();
       return Math.abs(error) < ANGLE_TOLERANCE; 
   }
 }
