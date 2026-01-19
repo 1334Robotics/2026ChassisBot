@@ -4,7 +4,7 @@ import edu.wpi.first.wpilibj.XboxController;
 
 public class Input {
     public static final XboxController driveController = new XboxController(0);
-
+    
     public static double getTranslationX() {
         return driveController.getLeftX();
     }
@@ -16,7 +16,7 @@ public class Input {
         System.out.println("Translation X: " + translationX);
         System.out.println("Translation Y: " + translationY);
     }
-
+    // getting the information neccessary for driving the robot
     public static double getTranslationY() {
         return driveController.getLeftY();
     }
