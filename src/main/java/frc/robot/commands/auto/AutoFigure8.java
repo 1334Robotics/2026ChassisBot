@@ -27,7 +27,7 @@ public class AutoFigure8 extends SequentialCommandGroup {
     
     // Safety constants
     private static final double REEF_CENTER_X = 8.77;
-    @SuppressWarnings("unused")
+    @SuppressWarnings("unused")// to suppress the error message because I don't like it.
     private static final double REEF_CENTER_Y = 4.105;
     private static final double SAFE_CROSSING_Y = 7.0; // 2.9m above reef center
     private static final double LEFT_ZONE_MAX_X = 5.5;
