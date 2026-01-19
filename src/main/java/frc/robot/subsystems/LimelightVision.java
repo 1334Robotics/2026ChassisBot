@@ -10,9 +10,9 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-/**
- * Limelight vision subsystem for AprilTag detection.
- */
+
+  //Limelight vision subsystem for AprilTag detection.
+ 
 public class LimelightVision extends SubsystemBase {
     // NetworkTable entries
     private final NetworkTable limelightTable;
