@@ -9,9 +9,12 @@ import frc.robot.commands.Autos;
 import frc.robot.commands.ExampleCommand;
 import frc.robot.subsystems.ExampleSubsystem;
 import frc.robot.subsystems.SwerveSubsystem;
+import frc.robot.subsystems.LimeLightVisionSubsystem;
 import swervelib.SwerveInputStream;
+import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 
 /**
@@ -23,6 +26,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
   private final ExampleSubsystem m_exampleSubsystem = new ExampleSubsystem();
+  private final LimeLightVisionSubsystem limeLightVisionSubsystem = new LimeLightVisionSubsystem();
   private final SwerveSubsystem drivebase = new SwerveSubsystem();
   // Replace with CommandPS4Controller or CommandJoystick if needed
   private final CommandXboxController m_driverController =
@@ -69,13 +73,19 @@ public class RobotContainer {
    * joysticks}.
    */
   private void configureBindings() {
-    // Schedule `ExampleCommand` when `exampleCondition` changes to `true`
-    new Trigger(m_exampleSubsystem::exampleCondition)
-        .onTrue(new ExampleCommand(m_exampleSubsystem));
-
-    // Schedule `exampleMethodCommand` when the Xbox controller's B button is pressed,
-    // cancelling on release.
-    m_driverController.b().whileTrue(m_exampleSubsystem.exampleMethodCommand());
+    Joystick joystick = new Joystick(0);
+  
+    // Button 1: Turn Limelight LEDs on
+    new JoystickButton(joystick, 1)
+        .whenPressed(() -> limeLightVisionSubsystem.setLEDMode(3)); // LED mode 3 = on
+  
+    // Button 2: Turn Limelight LEDs off
+    new JoystickButton(joystick, 2)
+        .whenPressed(() -> limeLightVisionSubsystem.setLEDMode(1)); // LED mode 1 = off
+  
+    // Button 3: Print horizontal offset to the console
+    new JoystickButton(joystick, 3)
+        .whenPressed(() -> System.out.println("Horizontal Offset: " + limeLightVisionSubsystem.getHorizontalOffset()));
   }
 
   /**
