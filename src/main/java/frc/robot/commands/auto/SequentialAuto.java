@@ -21,14 +21,12 @@ import frc.robot.subsystems.DriveSubsystem;
  */
 public class SequentialAuto extends SequentialCommandGroup {
     
-    public SequentialAuto() { }
-    
     public SequentialAuto(DriveSubsystem drive) {
         addCommands(
             // Startup diagnostics
             Commands.runOnce(() -> {
                 System.out.println("\n========== SEQUENTIAL AUTO (REEFSCAPE) ==========");
-                int startPose = drive.getPose();
+                Pose2d startPose = drive.getPose();
                 System.out.println("Starting position: (" + 
                     String.format("%.2f, %.2f", startPose.getX(), startPose.getY()) + ")");
                 System.out.println("Waypoints:");
@@ -52,7 +50,7 @@ public class SequentialAuto extends SequentialCommandGroup {
             new AutoDriveCommand(
                 drive,
                 FieldConstants.BLUE_CORAL_STATION,
-                2.0, SEQUENTIAL_TIMEOUT
+                2.0, 8.0
             ),
             Commands.waitSeconds(1.0),  // Pickup time
             
@@ -69,7 +67,7 @@ public class SequentialAuto extends SequentialCommandGroup {
             
             // Waypoint 3: Return to safe zone
             Commands.runOnce(() -> {
-                System.out.println("[SequentialAuto] Waypoint 3: Returning to safe zone")
+                System.out.println("[SequentialAuto] Waypoint 3: Returning to safe zone");
             }),
             new AutoDriveCommand(
                 drive,
@@ -86,5 +84,6 @@ public class SequentialAuto extends SequentialCommandGroup {
                 drive.lock();
                 System.out.println();
             })
-        )
+        );
     }
+}

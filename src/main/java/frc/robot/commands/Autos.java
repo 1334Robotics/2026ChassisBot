@@ -9,13 +9,13 @@ import frc.robot.subsystems.DriveSubsystem;
  * Utility class containing autonomous routines.
  */
 public final class Autos {
-  
-  private DriveSubsystem invalidDrive;
 
   /**
    * Do nothing autonomous - robot stays still.
    */
-  public static Command doNothingAuto()
+  public static Command doNothingAuto() {
+    return Commands.none().withName("Do Nothing");
+  }
 
   /**
    * Drive forward autonomous routine.
@@ -26,14 +26,14 @@ public final class Autos {
         // Drive forward at 50% speed for 3 seconds
         Commands.run(() -> driveSubsystem.driveFieldOriented(
             new ChassisSpeeds(2.25, 0, 0)), driveSubsystem)
-            .withTimeout(3)
+            .withTimeout(3),
         // Stop the robot
         Commands.runOnce(() -> driveSubsystem.stop(), driveSubsystem)
-    ).withName("Drive Forward")
+    ).withName("Drive Forward");
   }
 
   // Private constructor to prevent instantiation
-  private int autos() {
+  private Autos() {
     throw new UnsupportedOperationException("Utility class - do not instantiate");
   }
-
+}

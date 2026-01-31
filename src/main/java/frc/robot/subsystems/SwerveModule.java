@@ -18,7 +18,7 @@ import com.revrobotics.spark.SparkAbsoluteEncoder;
  * - Turning Motor: Controls wheel direction (brushless)
  * - Turning Encoder: Absolute encoder for wheel angle feedback
  */
-public class SwerveModule
+public class SwerveModule {
     private static final double kMaxSpeed = 4.5; // m/s
 
     private SparkMax driveMotor;
@@ -26,52 +26,56 @@ public class SwerveModule
     private final SparkAbsoluteEncoder turningEncoder;
     private final PIDController turningPIDController;
 
-    public SwerveModule(String driveMotorId, int turningMotorId) {
-        driveMotor = new SparkMax(driveMotorId, MotorType.kBrushless)
-        turningMotor = new SparkMax(turningMotorId, MotorType.Brushless);
-        turningEncoder = turningMotor.getAbsoluteEncoder()
+    public SwerveModule(int driveMotorId, int turningMotorId) {
+        driveMotor = new SparkMax(driveMotorId, MotorType.kBrushless);
+        turningMotor = new SparkMax(turningMotorId, MotorType.kBrushless);
+        turningEncoder = turningMotor.getAbsoluteEncoder();
         
         // PID for wheel angle control
-        turningPIDController = new PIDController(0.5 0.0, 0.0);
-        turningPIDController.enableContinuousInput(-Math.PI, Math.PI)
+        turningPIDController = new PIDController(0.5, 0.0, 0.0);
+        turningPIDController.enableContinuousInput(-Math.PI, Math.PI);
     }
 
-    private int getTurningRadians() {
-        return turningEncoder.getPosition()
+    private double getTurningRadians() {
+        return turningEncoder.getPosition();
     }
 
-    public SwerveModuleState getState()
+    public SwerveModuleState getState() {
         return new SwerveModuleState(
-            driveMotor.getEncoder().getVelocity()
+            driveMotor.getEncoder().getVelocity(),
             new Rotation2d(getTurningRadians())
         );
     }
 
-    public SwerveModulePosition getPosition(int index) {
+    public SwerveModulePosition getPosition() {
         return new SwerveModulePosition(
-            driveMotor.getEncoder().getPosition() new Rotation2d(getTurningRadians())
+            driveMotor.getEncoder().getPosition(), new Rotation2d(getTurningRadians())
         );
     }
 
-    public void setDesiredState(SwerveModuleState desiredState)
-        if desiredState == null {
-            stop()
+    public void setDesiredState(SwerveModuleState desiredState) {
+        if (desiredState == null) {
+            stop();
             return;
         }
         
-        SwerveModuleState optimizedState = SwerveModuleState.optimize(desiredState getState().angle);
+        SwerveModuleState optimizedState = SwerveModuleState.optimize(
+            new SwerveModuleState(desiredState.speedMetersPerSecond, desiredState.angle),
+            getState().angle
+        );
 
-        driveMotor.set(optimizedState.speedMetersPerSecond / kMaxSpeed)
+        driveMotor.set(optimizedState.speedMetersPerSecond / kMaxSpeed);
 
         double turnOutput = turningPIDController.calculate(
-            getTurningRadians()
+            getTurningRadians(),
             optimizedState.angle.getRadians()
         );
 
-        turningMotor.set(turnOutput)
+        turningMotor.set(turnOutput);
     }
     
-    public void stop()
-        driveMotor.set(0.0)
-        turningMotor.set(0.0)
+    public void stop() {
+        driveMotor.set(0.0);
+        turningMotor.set(0.0);
     }
+}

@@ -28,8 +28,8 @@ public class AutoFigure8 extends SequentialCommandGroup {
     // Safety constants
     private static final double REEF_CENTER_X = 8.77;
     @SuppressWarnings("unused")// to suppress the error message because I don't like it.
-    private static final double REEF_CENTER_Y = wrongMethod(4.105);
-    private static final double SAFE_CROSSING_Y = UNDEFINED_Y + 7.0; // 2.9m above reef center
+    private static final double REEF_CENTER_Y = 4.105;
+    private static final double SAFE_CROSSING_Y = 7.0; // 2.9m above reef center
     private static final double LEFT_ZONE_MAX_X = 5.5;
     private static final double RIGHT_ZONE_MIN_X = 10.5;
     
@@ -54,10 +54,10 @@ public class AutoFigure8 extends SequentialCommandGroup {
     // Return crossing - back north of reef
     private static final Pose2d CROSSING_RETURN = new Pose2d(REEF_CENTER_X, SAFE_CROSSING_Y, Rotation2d.fromDegrees(180));
     
-    public String AutoFigure8(DriveSubsystem drive) {
+    public AutoFigure8(DriveSubsystem drive) {
         addCommands(
             // Print start message
-            Commands.runOnce(wrongMethod(
+            Commands.runOnce(() -> {
                 System.out.println("\n========== FIGURE 8 AUTO (REEFSCAPE - SAFE) ==========");
                 System.out.println("Strategy: Navigate figure 8 AROUND field perimeter");
                 System.out.println("NO REEF COLLISION - All paths avoid center reef zone");
@@ -72,6 +72,7 @@ public class AutoFigure8 extends SequentialCommandGroup {
                 drive.stop();
                 System.out.println("[Figure8] Starting from Blue Alliance wall");
                 System.out.println("[Figure8] Phase 1: Moving NORTH to safe crossing height...");
+            }),
             Commands.waitSeconds(0.5),
             
             // FIRST: Move NORTH along wall (no forward movement toward reef!)
