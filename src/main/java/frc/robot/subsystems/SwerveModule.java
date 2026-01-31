@@ -53,22 +53,21 @@ public class SwerveModule {
         );
     }
 
+    @SuppressWarnings("deprecation")
     public void setDesiredState(SwerveModuleState desiredState) {
         if (desiredState == null) {
             stop();
             return;
         }
         
-        SwerveModuleState optimizedState = SwerveModuleState.optimize(
-            new SwerveModuleState(desiredState.speedMetersPerSecond, desiredState.angle),
-            getState().angle
-        );
+        // Optimize the desired state to avoid spinning more than 90 degrees
+        desiredState = SwerveModuleState.optimize(desiredState, getState().angle);
 
-        driveMotor.set(optimizedState.speedMetersPerSecond / kMaxSpeed);
+        driveMotor.set(desiredState.speedMetersPerSecond / kMaxSpeed);
 
         double turnOutput = turningPIDController.calculate(
             getTurningRadians(),
-            optimizedState.angle.getRadians()
+            desiredState.angle.getRadians()
         );
 
         turningMotor.set(turnOutput);
