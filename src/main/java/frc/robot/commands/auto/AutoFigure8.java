@@ -140,7 +140,12 @@ public class AutoFigure8 extends SequentialCommandGroup {
                 System.out.println("[Figure8] Final position: (" + 
                     String.format("%.2f, %.2f @ %.0f deg", finalPose.getX(), finalPose.getY(), finalPose.getRotation().getDegrees()) + ")");
                 System.out.println("[Figure8] Total distance: ~35 meters\n");
-            })
+            }),
+            
+            // Hold position until autonomous ends - prevents default command from taking over
+            Commands.run(() -> {
+                drive.stop();
+            }, drive).withName("HoldPosition")
         );
     }
 }
