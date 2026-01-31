@@ -498,11 +498,21 @@ public class DriveSubsystem extends SubsystemBase {
                 }
             }
             
+            // Check gyro heading - THIS IS OFTEN THE CAUSE OF ROTATION ISSUES
+            var heading = swerveDrive.getOdometryHeading();
+            System.out.println("\n=== GYRO HEADING CHECK ===");
+            System.out.println("Current Heading: " + heading.getDegrees() + "°");
+            System.out.println("If heading is NOT 0° when robot faces forward, wheels will spin!");
+            System.out.println("Press POV Up to zero gyro if needed.");
+            
             System.out.println("\n=== EXPECTED BEHAVIOR ===");
             System.out.println("1. When driving forward (Y+), all modules should point forward");
             System.out.println("2. When driving left (X+), all modules should point left");
             System.out.println("3. When rotating CCW, modules should form an X pattern");
-            System.out.println("4. If robot spins unexpectedly, check 'invertedIMU' in swervedrive.json");
+            System.out.println("4. If robot spins unexpectedly:");
+            System.out.println("   - Check if gyro heading is 0 when facing forward");
+            System.out.println("   - Check 'invertedIMU' in swervedrive.json");
+            System.out.println("   - Try pressing POV Up to zero gyro");
             System.out.println("5. If robot drives wrong direction, check drive motor 'inverted' settings");
             System.out.println("===================================");
             
@@ -542,6 +552,13 @@ public class DriveSubsystem extends SubsystemBase {
             SmartDashboard.putNumber("Drive/Rotation Velocity (rad/s)", currentRotSpeed);
             SmartDashboard.putNumber("Drive/Total Speed (m/s)", 
                 Math.sqrt(currentXSpeed * currentXSpeed + currentYSpeed * currentYSpeed));
+            
+            // Debug: Show if rotation is being commanded when it shouldn't be
+            if (Math.abs(currentRotSpeed) > 0.01 && Math.abs(currentXSpeed) < 0.1 && Math.abs(currentYSpeed) < 0.1) {
+                SmartDashboard.putBoolean("Drive/Unexpected Rotation", true);
+            } else {
+                SmartDashboard.putBoolean("Drive/Unexpected Rotation", false);
+            }
             
             updateModuleData();
             
