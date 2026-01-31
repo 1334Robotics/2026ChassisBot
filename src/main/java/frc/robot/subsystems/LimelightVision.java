@@ -26,17 +26,17 @@ public class LimelightVision extends SubsystemBase {
     private final NetworkTableEntry tid; // AprilTag ID
     
     // Cached values
-    private double horizontalOffset 0.0
+    private double horizontalOffset = 0.0;
     private double verticalOffset = 0.0;
     private double targetArea = 0.0;
-    private boolean hasTarget = false  // Fixed: int to boolean
-    private int currentTagId = -1
+    private boolean hasTarget = false;  // Fixed: int to boolean
+    private int currentTagId = -1;
     private double totalLatencyMs = 0.0;
     
     // Connection status
     private boolean isConnected = false;
     private double lastUpdateTime = 0.0;
-    private static final double CONNECTION_TIMEOUT_SECONDS = 1.0  // Fixed: Added value
+    private static final double CONNECTION_TIMEOUT_SECONDS = 1.0;  // Fixed: Added value
     
     // Reference to drive subsystem
     private DriveSubsystem driveSubsystem = null;

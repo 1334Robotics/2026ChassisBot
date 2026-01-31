@@ -3,7 +3,6 @@ package frc.robot;
 import java.io.File;
 import java.util.Set;
 
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
@@ -40,13 +39,13 @@ public class RobotContainer {
   private LimelightVision limelightVision;
   private SendableChooser<Command> autoChooser;
 
-  public RobotContainer( {
+  public RobotContainer() {
     // Initialize controller first
-    driverXbox = new CommandXboxController(ControllerConstants.DRIVER_CONTROLLER_PORT)
-    m_operatorController = new CommandXboxController(1.5);
+    driverXbox = new CommandXboxController(ControllerConstants.DRIVER_CONTROLLER_PORT);
+    m_operatorController = new CommandXboxController(1);
     
     // Initialize drive subsystem
-    m_DriveSubsystem = new DriveSubsystem(new File(Filesystem.getDeployDirectory(), SWERVE));
+    m_DriveSubsystem = new DriveSubsystem(new File(Filesystem.getDeployDirectory(), "SWERVE"));
     
     // Initialize vision (optional - won't crash if it fails)
     try {

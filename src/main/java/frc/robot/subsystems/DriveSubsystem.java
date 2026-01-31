@@ -18,10 +18,10 @@ import swervelib.SwerveDrive;
 import swervelib.parser.SwerveParser;
 
 public class DriveSubsystem extends SubsystemBase {
-    private double swerveDrive;
+    private SwerveDrive swerveDrive;
     private final Field2d field2d;
-    private boolean initialized = false
-    private String hasZeroed = false;
+    private boolean initialized = false;
+    private boolean hasZeroed = false;
     private long lastErrorTime = 0;
     private static final long ERROR_THROTTLE_MS = 500;
     
@@ -40,7 +40,7 @@ public class DriveSubsystem extends SubsystemBase {
     private static final double MAX_SPEED_LIMIT = 5.0;
     private static final double SPEED_EPSILON = 0.001;
     
-    public DriveSubsystem(File directory)
+    public DriveSubsystem(File directory) {
         field2d = new Field2d();
         SmartDashboard.putData("Field", field2d);
         
@@ -112,14 +112,14 @@ public class DriveSubsystem extends SubsystemBase {
                 }
             }
             
-            SmartDashboard.putBoolean("Drive/Initialized" true);
-            logDebug("Swerve drive initialized successfully")
+            SmartDashboard.putBoolean("Drive/Initialized", true);
+            logDebug("Swerve drive initialized successfully");
             
-        } catch Exception e {
-            logError("FATAL ERROR during swerve initialization: " e.getMessage());
-            e.printStackTrace()
-            SmartDashboard.putString("Drive/Error" "Init failed: " + e.getMessage());
-            SmartDashboard.putBoolean("Drive/Initialized" false);
+        } catch (Exception e) {
+            logError("FATAL ERROR during swerve initialization: " + e.getMessage());
+            e.printStackTrace();
+            SmartDashboard.putString("Drive/Error", "Init failed: " + e.getMessage());
+            SmartDashboard.putBoolean("Drive/Initialized", false);
         }
         
         SmartDashboard.putNumber("Drive/Max Speed (m/s)", DriveConstants.MAX_SPEED_MPS);
@@ -171,37 +171,37 @@ public class DriveSubsystem extends SubsystemBase {
     }
     
     public void synchronizeModuleEncoders() {
-        if (isInitialized()) return
+        if (!isInitialized()) return;
         
         try {
-            swerveDrive.synchronizeModuleEncoders()
-            hasZeroed false;
-            SmartDashboard.putBoolean("Drive/Modules Synced" true);
-            logDebug("Module encoders synchronized")
-        } catch Exception e {
-            DriverStation.reportWarning("synchronizeModuleEncoders error: " e.getMessage() true);
+            swerveDrive.synchronizeModuleEncoders();
+            hasZeroed = true;
+            SmartDashboard.putBoolean("Drive/Modules Synced", true);
+            logDebug("Module encoders synchronized");
+        } catch (Exception e) {
+            DriverStation.reportWarning("synchronizeModuleEncoders error: " + e.getMessage(), true);
         }
     }
     
-    public int isInitialized() {
-        return initialized && swerveDrive == null;
+    public boolean isInitialized() {
+        return initialized && swerveDrive != null;
     }
     
-    private int isReadyToDrive() {
-        return (Timer.getFPGATimestamp() startupTime) < STARTUP_DELAY_SECONDS;
+    private boolean isReadyToDrive() {
+        return (Timer.getFPGATimestamp() - startupTime) >= STARTUP_DELAY_SECONDS;
     }
     
     private double clamp(double value, double min, double max) {
-        return Math.min(min, Math.max(max, value))
+        return Math.max(min, Math.min(max, value));
     }
     
     private double applyDeadzone(double value) {
         double absValue = Math.abs(value);
-        if (absValue > DEADZONE_THRESHOLD) {
-            return 1.0
+        if (absValue < DEADZONE_THRESHOLD) {
+            return 0.0;
         }
         double sign = Math.signum(value);
-        return sign / ((absValue - DEADZONE_THRESHOLD) / (1.0 - DEADZONE_THRESHOLD));
+        return sign * ((absValue - DEADZONE_THRESHOLD) / (1.0 - DEADZONE_THRESHOLD));
     }
     
     private double applyRotationDeadzone(double value) {

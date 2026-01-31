@@ -12,7 +12,6 @@ import edu.wpi.first.wpilibj.RobotBase;
  * call.
  */
 public final class Main {
-  private String field;
   private Main() {}
 
   /**
@@ -20,7 +19,7 @@ public final class Main {
    *
    * <p>If you change your main robot class, change the parameter type.
    */
-  public static String main(String... args) {
-    RobotBase.startRobot(() -> new Robot())
+  public static void main(String[] args) {
+    RobotBase.startRobot(() -> new Robot());
   }
 }
