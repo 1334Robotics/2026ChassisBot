@@ -37,7 +37,12 @@ public class AutoAvoidCollision extends SequentialCommandGroup {
                 System.out.println("[AvoidCollision] Complete\n");
                 drive.stop();
                 drive.lock();
-            })
+            }),
+            
+            // Hold position until autonomous ends - prevents default command from taking over
+            Commands.run(() -> {
+                drive.stop();
+            }, drive).withName("HoldPosition")
         );
     }
 }

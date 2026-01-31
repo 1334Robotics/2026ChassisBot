@@ -56,7 +56,12 @@ public class AutoPickupAuto extends SequentialCommandGroup {
                 drive.stop();
                 drive.lock();
                 System.out.println("[PickupCycles] [OK] Complete - 3 pieces scored\n");
-            })
+            }),
+            
+            // Hold position until autonomous ends - prevents default command from taking over
+            Commands.run(() -> {
+                drive.stop();
+            }, drive).withName("HoldPosition")
         );
     }
 }

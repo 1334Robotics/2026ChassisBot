@@ -76,7 +76,12 @@ public class SimpleAuto extends SequentialCommandGroup {
                 drive.stop();
                 drive.lock();
                 System.out.println();
-            })
+            }),
+            
+            // Hold position until autonomous ends - prevents default command from taking over
+            Commands.run(() -> {
+                drive.stop();
+            }, drive).withName("HoldPosition")
         );
     }
 }

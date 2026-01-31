@@ -20,7 +20,16 @@ public class AutoSafeScore extends SequentialCommandGroup {
             Commands.waitSeconds(1.5),
             Commands.runOnce(() -> System.out.println("[SafeScore] Returning to safe zone")),
             new AutoDriveCommand(drive, FieldConstants.BLUE_SAFE_ZONE, 2.0, 8.0),
-            Commands.runOnce(() -> drive.stop())
+            Commands.runOnce(() -> {
+                drive.stop();
+                drive.lock();
+                System.out.println("[SafeScore] Complete\n");
+            }),
+            
+            // Hold position until autonomous ends - prevents default command from taking over
+            Commands.run(() -> {
+                drive.stop();
+            }, drive).withName("HoldPosition")
         );
     }
 }

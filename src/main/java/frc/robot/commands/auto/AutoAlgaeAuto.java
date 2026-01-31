@@ -24,7 +24,12 @@ public class AutoAlgaeAuto extends SequentialCommandGroup {
                 drive.stop();
                 drive.lock();
                 System.out.println("[Algae] Complete\n");
-            })
+            }),
+            
+            // Hold position until autonomous ends - prevents default command from taking over
+            Commands.run(() -> {
+                drive.stop();
+            }, drive).withName("HoldPosition")
         );
     }
 }

@@ -36,7 +36,12 @@ public class AutoBalance extends SequentialCommandGroup {
                 drive.stop();
                 drive.lock();
                 System.out.println("[Balance] Complete - holding position\n");
-            })
+            }),
+            
+            // Hold position until autonomous ends - prevents default command from taking over
+            Commands.run(() -> {
+                drive.stop();
+            }, drive).withName("HoldPosition")
         );
     }
 }
