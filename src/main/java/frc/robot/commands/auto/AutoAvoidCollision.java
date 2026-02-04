@@ -8,16 +8,33 @@ import frc.robot.Constants.FieldConstants;
 import frc.robot.subsystems.DriveSubsystem;
 
 /**
- * Collision-Avoidant Auto: Navigate around game pieces.
+ * Collision Avoidance Auto - FIRST Rebuilt 2025 Strategy
+ * 
+ * Game: FIRST Reefscape Rebuilt
+ * Objective: Navigate around field obstacles (reef and game pieces)
+ * 
+ * Strategy:
+ * 1. Start at Blue Alliance
+ * 2. Move along perimeter to avoid center reef
+ * 3. Navigate to safe approach position north of reef
+ * 4. Approach Reef Left scoring position carefully
+ * 5. Retreat via perimeter route back to safe zone
+ * 
+ * Points: 0 (navigation practice - can be modified for scoring)
+ * Time: ~25 seconds
+ * Purpose: Demonstrate collision avoidance and safe pathing
+ * Best for: Testing obstacle detection and path planning
  */
 public class AutoAvoidCollision extends SequentialCommandGroup {
     
     public AutoAvoidCollision(DriveSubsystem drive) {
         addCommands(
             Commands.runOnce(() -> {
-                System.out.println("\n========== AVOID COLLISION AUTO ==========");
+                System.out.println("\n========== COLLISION AVOID - FIRST REBUILT 2025 ==========");
                 System.out.println("Strategy: Navigate around center field obstacles");
-                System.out.println("=========================================\n");
+                System.out.println("Objective: Safe pathing demonstration");
+                System.out.println("Expected Points: 0 (navigation practice)");
+                System.out.println("=========================================================\n");
             }),
             Commands.runOnce(() -> drive.stop()),
             Commands.waitSeconds(0.3),

@@ -7,15 +7,20 @@ import frc.robot.Constants.FieldConstants;
 import frc.robot.subsystems.DriveSubsystem;
 
 /**
- * Simple Reefscape Auto: Drive to reef and score.
+ * Simple Auto - FIRST Rebuilt 2025 Strategy
  * 
- * Sequence:
- * 1. Start at Blue Alliance (1.5, 4.105)
- * 2. Drive to Reef Front approach (8.77, 2.6)
- * 3. Simulate scoring (wait for mechanism)
- * 4. Return to safe zone
+ * Game: FIRST Reefscape Rebuilt
+ * Objective: Score preloaded coral on reef center structure
  * 
- * Total time: ~12 seconds
+ * Strategy:
+ * 1. Start at Blue Alliance starting zone with preloaded coral
+ * 2. Drive to Reef Front scoring position (nearest branch)
+ * 3. Score coral on reef (Level 1 - 3 points)
+ * 4. Return to safe zone for endgame positioning
+ * 
+ * Points: 3 points (1 coral on reef)
+ * Time: ~12 seconds
+ * Reliability: High - simple path, minimal risk
  */
 public class SimpleAuto extends SequentialCommandGroup {
     
@@ -23,13 +28,15 @@ public class SimpleAuto extends SequentialCommandGroup {
         addCommands(
             // Startup diagnostics
             Commands.runOnce(() -> {
-                System.out.println("\n========== SIMPLE AUTO (REEFSCAPE) ==========");
+                System.out.println("\n========== SIMPLE AUTO - FIRST REBUILT 2025 ==========");
+                System.out.println("Strategy: Score preloaded coral on reef");
                 Pose2d startPose = drive.getPose();
-                System.out.println("Robot starting position: (" + 
+                System.out.println("Starting position: (" + 
                     String.format("%.2f, %.2f", startPose.getX(), startPose.getY()) + ")");
-                System.out.println("Target: Reef Front approach (8.77, 2.6)");
-                System.out.println("Field: 17.54m × 8.21m (Reefscape 2025)");
-                System.out.println("==========================================\n");
+                System.out.println("Target: Reef Front (8.27, 2.5)");
+                System.out.println("Expected Points: 3 (Level 1 coral)");
+                System.out.println("Field: 16.54m × 8.07m (Rebuilt 2025)");
+                System.out.println("====================================================\n");
             }),
             
             // Step 1: Confirm starting position and stabilize
