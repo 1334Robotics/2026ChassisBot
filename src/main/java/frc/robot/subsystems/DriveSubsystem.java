@@ -36,7 +36,7 @@ public class DriveSubsystem extends SubsystemBase {
     private static final double STARTUP_DELAY_SECONDS = 0.5;
     private static final double MAX_DT = 0.1;
     private static final double DEADZONE_THRESHOLD = 0.1;
-    private static final double ROTATION_DEADZONE = 0.15;
+    private static final double ROTATION_DEADZONE = 0.25;  // Increased from 0.15 to prevent phantom spinning
     private static final double MAX_SPEED_LIMIT = 5.0;
     private static final double SPEED_EPSILON = 0.001;
     
@@ -77,6 +77,10 @@ public class DriveSubsystem extends SubsystemBase {
             logDebug("Running in " + (RobotBase.isSimulation() ? "SIMULATION" : "REAL") + " mode");
             
             swerveDrive = new SwerveParser(swerveJsonDirectory).createSwerveDrive(DriveConstants.MAX_SPEED_MPS);
+            
+            // CRITICAL: Disable heading correction to prevent phantom spinning
+            // Heading correction tries to maintain heading when not rotating, but can cause unwanted rotation
+            swerveDrive.setHeadingCorrection(false);
             
             verifyModules();
             initialized = true;

@@ -7,19 +7,21 @@ import frc.robot.Constants.FieldConstants;
 import frc.robot.subsystems.DriveSubsystem;
 
 /**
- * Complex Path Reefscape Auto: Complete reef scoring pattern.
+ * Complex Path Auto - FIRST Rebuilt 2025 Strategy
  * 
- * Strategy:
- * 1. Start at Blue Alliance (preloaded coral)
- * 2. Score preload on Reef Front (nearest)
- * 3. Pickup coral at Coral Station
- * 4. Score on Reef Left (120°)
- * 5. Pickup coral at Coral Station
- * 6. Score on Reef Right (60°)
- * 7. Return to safe zone
+ * Game: FIRST Reefscape Rebuilt
+ * Objective: Maximum coral scoring with multiple pickup cycles
  * 
- * Total: 3 pieces scored on reef
- * Estimated time: ~25-30 seconds
+ * Strategy (3-piece auto):
+ * 1. Start with preloaded coral → Score on Reef Front (Level 1)
+ * 2. Pickup from Coral Station → Score on Reef Left (Level 1)
+ * 3. Pickup from Coral Station → Score on Reef Right (Level 1)
+ * 4. Return to safe zone for endgame positioning
+ * 
+ * Points: 9 points (3 corals × 3 points each)
+ * Time: ~25-30 seconds
+ * Complexity: High - requires precise navigation and coral handling
+ * Best for: Experienced drivers, reliable intake/outtake mechanisms
  */
 public class AutoComplexPath extends SequentialCommandGroup {
     
@@ -27,18 +29,21 @@ public class AutoComplexPath extends SequentialCommandGroup {
         addCommands(
             // Startup diagnostics
             Commands.runOnce(() -> {
-                System.out.println("\n========== COMPLEX PATH AUTO (REEFSCAPE) ==========");
+                System.out.println("\n========== COMPLEX PATH - FIRST REBUILT 2025 ==========");
+                System.out.println("Strategy: Multi-coral scoring (3-piece auto)");
                 Pose2d startPose = drive.getPose();
                 System.out.println("Starting position: (" + 
                     String.format("%.2f, %.2f", startPose.getX(), startPose.getY()) + ")");
                 System.out.println("\nScoring Sequence:");
-                System.out.println("  1. Reef Front (preload): (8.77, 2.6) @ 0°");
+                System.out.println("  1. Reef Front (preload): (8.27, 2.5) @ 0° → 3 pts");
                 System.out.println("  2. Pickup: Coral Station (1.2, 7.0)");
-                System.out.println("  3. Reef Left: (7.57, 5.105) @ 120°");
+                System.out.println("  3. Reef Left: (7.2, 5.0) @ 120° → 3 pts");
                 System.out.println("  4. Pickup: Coral Station (1.2, 7.0)");
-                System.out.println("  5. Reef Right: (10.0, 5.105) @ 60°");
-                System.out.println("  6. Safe Zone: (2.5, 1.5) @ 0°");
-                System.out.println("===================================================\n");
+                System.out.println("  5. Reef Right: (9.3, 5.0) @ 60° → 3 pts");
+                System.out.println("  6. Safe Zone: (2.0, 1.5) @ 0°");
+                System.out.println("\nExpected Points: 9 (3 corals on reef)");
+                System.out.println("Field: 16.54m × 8.07m (Rebuilt 2025)");
+                System.out.println("=====================================================\n");
             }),
             
             // Initialize

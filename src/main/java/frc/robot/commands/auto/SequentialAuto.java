@@ -7,17 +7,20 @@ import frc.robot.Constants.FieldConstants;
 import frc.robot.subsystems.DriveSubsystem;
 
 /**
- * Multi-Reef Reefscape Auto: Score on multiple reef branches.
+ * Sequential Auto - FIRST Rebuilt 2025 Strategy
  * 
- * Sequence:
- * 1. Start at Blue Alliance (1.5, 4.105)
- * 2. Drive to Coral Station pickup (1.2, 7.0) - pickup first piece
- * 3. Drive to Reef Left branch (7.57, 5.105)
- * 4. Score on left branch
- * 5. Return to safe zone
+ * Game: FIRST Reefscape Rebuilt
+ * Objective: Multi-waypoint coral scoring demonstration
  * 
- * Total time: ~20 seconds
- * Demonstrates path planning around reef
+ * Strategy:
+ * 1. Start at Blue Alliance
+ * 2. Navigate to Coral Station → Pickup coral
+ * 3. Navigate to Reef Left branch → Score coral (3 pts)
+ * 4. Return to safe zone for endgame
+ * 
+ * Points: 3 points (1 coral from pickup)
+ * Time: ~20 seconds
+ * Purpose: Demonstrates path planning and waypoint navigation
  */
 public class SequentialAuto extends SequentialCommandGroup {
     
@@ -25,15 +28,18 @@ public class SequentialAuto extends SequentialCommandGroup {
         addCommands(
             // Startup diagnostics
             Commands.runOnce(() -> {
-                System.out.println("\n========== SEQUENTIAL AUTO (REEFSCAPE) ==========");
+                System.out.println("\n========== SEQUENTIAL AUTO - FIRST REBUILT 2025 ==========");
+                System.out.println("Strategy: Multi-waypoint coral scoring");
                 Pose2d startPose = drive.getPose();
                 System.out.println("Starting position: (" + 
                     String.format("%.2f, %.2f", startPose.getX(), startPose.getY()) + ")");
                 System.out.println("Waypoints:");
                 System.out.println("  1. Coral Station: (1.2, 7.0) - Pickup");
-                System.out.println("  2. Reef Left: (7.57, 5.105) - Score");
-                System.out.println("  3. Safe Zone: (2.5, 1.5) - Return");
-                System.out.println("=================================================\n");
+                System.out.println("  2. Reef Left: (7.2, 5.0) - Score (3 pts)");
+                System.out.println("  3. Safe Zone: (2.0, 1.5) - Return");
+                System.out.println("Expected Points: 3");
+                System.out.println("Field: 16.54m × 8.07m (Rebuilt 2025)");
+                System.out.println("========================================================\n");
             }),
             
             // Initialize: Verify starting position

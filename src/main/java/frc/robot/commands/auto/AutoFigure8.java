@@ -8,28 +8,42 @@ import frc.robot.Constants.FieldConstants;
 import frc.robot.subsystems.DriveSubsystem;
 
 /**
- * Figure 8 Auto: Navigate in a figure 8 pattern around the Reefscape field.
+ * Figure 8 Navigation Auto - FIRST Rebuilt 2025 Strategy
+ * 
+ * Game: FIRST Reefscape Rebuilt
+ * Objective: Demonstrate advanced field navigation around reef obstacle
+ * 
+ * Strategy:
+ * - Navigate in figure 8 pattern around entire Rebuilt field
+ * - Avoid center reef structure at all times
+ * - Left loop: Counter-clockwise around west side
+ * - Right loop: Clockwise around east side
+ * - Cross field safely above reef (Y=6.9m)
  * 
  * Path Design:
- * - Starts at Blue Alliance wall (X=1.5, Y=4.1)
- * - Moves NORTH first to avoid hub/reef collision
- * - Left loop: Counter-clockwise around left side (X < 5.5m)
- * - Crosses at Y=7.0m (safely above reef at Y=4.1m)
- * - Right loop: Clockwise around right side (X > 10.5m)
- * - Returns to start via safe northern route
+ * - Starts at Blue Alliance wall (X=1.5, Y=4.035)
+ * - Moves NORTH first to avoid reef collision
+ * - Left loop: X < 5.5m (stays west of reef)
+ * - Crosses at Y=6.9m (2.87m clearance above reef)
+ * - Right loop: X > 10.5m (stays east of reef)
+ * - Returns via safe northern route
  * 
  * Safety Zones:
- * - Reef danger zone: X=6.5-11.0m, Y=2.5-5.7m (avoided completely)
- * - Crossing height: Y=7.0m (2.9m clearance above reef center)
- * - Field boundaries: X=0-17.54m, Y=0-8.21m (0.5m margin maintained)
+ * - Reef danger zone: X=6.5-10.0m, Y=2.5-5.5m (avoided completely)
+ * - Crossing height: Y=6.9m (safe clearance)
+ * - Field boundaries: X=0.5-16.04m, Y=0.5-7.57m (0.5m margin)
+ * 
+ * Points: 0 (navigation practice only)
+ * Time: ~35-40 seconds
+ * Purpose: Test autonomous navigation and obstacle avoidance
  */
 public class AutoFigure8 extends SequentialCommandGroup {
     
     // Safety constants
-    private static final double REEF_CENTER_X = 8.77;
+    private static final double REEF_CENTER_X = 8.27;
     @SuppressWarnings("unused")// to suppress the error message because I don't like it.
-    private static final double REEF_CENTER_Y = 4.105;
-    private static final double SAFE_CROSSING_Y = 7.0; // 2.9m above reef center
+    private static final double REEF_CENTER_Y = 4.035;
+    private static final double SAFE_CROSSING_Y = 6.9; // 2.87m above reef center
     private static final double LEFT_ZONE_MAX_X = 5.5;
     private static final double RIGHT_ZONE_MIN_X = 10.5;
     
@@ -37,8 +51,8 @@ public class AutoFigure8 extends SequentialCommandGroup {
     private static final Pose2d SAFE_NORTH = new Pose2d(1.5, SAFE_CROSSING_Y, Rotation2d.fromDegrees(0));
     
     // LEFT LOOP waypoints (counter-clockwise around left side)
-    private static final Pose2d LEFT_TOP = new Pose2d(3.0, 7.5, Rotation2d.fromDegrees(0));
-    private static final Pose2d LEFT_MID_EAST = new Pose2d(LEFT_ZONE_MAX_X, 6.5, Rotation2d.fromDegrees(-45));
+    private static final Pose2d LEFT_TOP = new Pose2d(3.0, 7.4, Rotation2d.fromDegrees(0));
+    private static final Pose2d LEFT_MID_EAST = new Pose2d(LEFT_ZONE_MAX_X, 6.3, Rotation2d.fromDegrees(-45));
     private static final Pose2d LEFT_BOTTOM = new Pose2d(3.5, 1.5, Rotation2d.fromDegrees(-90));
     private static final Pose2d LEFT_MID_RETURN = new Pose2d(5.0, 3.0, Rotation2d.fromDegrees(45));
     
@@ -46,9 +60,9 @@ public class AutoFigure8 extends SequentialCommandGroup {
     private static final Pose2d CROSSING_NORTH = new Pose2d(REEF_CENTER_X, SAFE_CROSSING_Y, Rotation2d.fromDegrees(0));
     
     // RIGHT LOOP waypoints (clockwise around right side)
-    private static final Pose2d RIGHT_TOP = new Pose2d(12.5, 7.5, Rotation2d.fromDegrees(0));
-    private static final Pose2d RIGHT_EAST = new Pose2d(14.5, 5.0, Rotation2d.fromDegrees(-90));
-    private static final Pose2d RIGHT_BOTTOM = new Pose2d(12.0, 1.5, Rotation2d.fromDegrees(-135));
+    private static final Pose2d RIGHT_TOP = new Pose2d(11.5, 7.4, Rotation2d.fromDegrees(0));
+    private static final Pose2d RIGHT_EAST = new Pose2d(13.5, 5.0, Rotation2d.fromDegrees(-90));
+    private static final Pose2d RIGHT_BOTTOM = new Pose2d(11.0, 1.5, Rotation2d.fromDegrees(-135));
     private static final Pose2d RIGHT_MID_RETURN = new Pose2d(RIGHT_ZONE_MIN_X, 3.5, Rotation2d.fromDegrees(135));
     
     // Return crossing - back north of reef
@@ -58,13 +72,15 @@ public class AutoFigure8 extends SequentialCommandGroup {
         addCommands(
             // Print start message
             Commands.runOnce(() -> {
-                System.out.println("\n========== FIGURE 8 AUTO (REEFSCAPE - SAFE) ==========");
-                System.out.println("Strategy: Navigate figure 8 AROUND field perimeter");
-                System.out.println("NO REEF COLLISION - All paths avoid center reef zone");
-                System.out.println("Left Loop: Y=1.5-7.5m, X=1.5-5.5m (stays west of reef)");
-                System.out.println("Right Loop: Y=1.5-7.5m, X=10.5-14.5m (stays east of reef)");
-                System.out.println("Crossing: Y=7.0m (2.9m clearance above reef center)");
-                System.out.println("======================================================\n");
+                System.out.println("\n========== FIGURE 8 NAV - FIRST REBUILT 2025 ==========");
+                System.out.println("Strategy: Advanced field navigation practice");
+                System.out.println("Objective: Navigate figure 8 avoiding reef obstacle");
+                System.out.println("Left Loop: Y=1.5-7.4m, X=1.5-5.5m (stays west of reef)");
+                System.out.println("Right Loop: Y=1.5-7.4m, X=10.5-13.5m (stays east of reef)");
+                System.out.println("Crossing: Y=6.9m (2.87m clearance above reef center)");
+                System.out.println("Expected Points: 0 (navigation practice)");
+                System.out.println("Field: 16.54m × 8.07m (Rebuilt 2025)");
+                System.out.println("=====================================================\n");
             }),
             
             // Start from Blue Alliance position

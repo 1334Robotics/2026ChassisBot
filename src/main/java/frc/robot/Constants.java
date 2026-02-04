@@ -27,17 +27,18 @@ public final class Constants {
     }
     
     public static final class FieldConstants {
-        // Field dimensions (Reefscape 2025) cuz really there is only that field in the constants file
-        public static final double FIELD_LENGTH = 17.54;
-        public static final double FIELD_WIDTH = 8.21;
+        // Field dimensions (Rebuilt 2025) - converted from feet to meters
+        // 54.269 ft = 16.54 m, 26.474 ft = 8.07 m
+        public static final double FIELD_LENGTH = 16.54;
+        public static final double FIELD_WIDTH = 8.07;
         // starting positions
         public static final Pose2d BLUE_ALLIANCE_START = new Pose2d(1.0, 1.0, new Rotation2d(0));
-        public static final Pose2d RED_ALLIANCE_START = new Pose2d(15.0, 1.0, new Rotation2d(Math.PI));
-        public static final Pose2d CENTER_START = new Pose2d(8.0, 4.0, new Rotation2d(0)); // Added CENTER_START 
+        public static final Pose2d RED_ALLIANCE_START = new Pose2d(15.54, 1.0, new Rotation2d(Math.PI));
+        public static final Pose2d CENTER_START = new Pose2d(8.27, 4.035, new Rotation2d(0)); // Updated to actual field center
         
         // Reef structure (center of field)
-        public static final double REEF_CENTER_X = 8.77;
-        public static final double REEF_CENTER_Y = 4.105;
+        public static final double REEF_CENTER_X = 8.27;
+        public static final double REEF_CENTER_Y = 4.035;
         public static final double REEF_RADIUS = 1.5;
         public static final double REEF_SAFE_DISTANCE = 2.5;
         
@@ -49,13 +50,13 @@ public final class Constants {
         public static final Pose2d BLUE_CORAL_STATION = new Pose2d(1.2, 7.0, Rotation2d.kZero);
         public static final Pose2d RED_CORAL_STATION = new Pose2d(FIELD_LENGTH - 1.2, 1.2, Rotation2d.fromDegrees(180));
         
-        // Reef branches (scoring positions)
-        public static final Pose2d REEF_FRONT = new Pose2d(8.77, 2.6, Rotation2d.fromDegrees(0));
-        public static final Pose2d REEF_LEFT = new Pose2d(7.57, 5.105, Rotation2d.fromDegrees(120));
-        public static final Pose2d REEF_RIGHT = new Pose2d(10.0, 5.105, Rotation2d.fromDegrees(60));
+        // Reef branches (scoring positions) - adjusted for correct field center
+        public static final Pose2d REEF_FRONT = new Pose2d(8.27, 2.5, Rotation2d.fromDegrees(0));
+        public static final Pose2d REEF_LEFT = new Pose2d(7.2, 5.0, Rotation2d.fromDegrees(120));
+        public static final Pose2d REEF_RIGHT = new Pose2d(9.3, 5.0, Rotation2d.fromDegrees(60));
         
         // Processor station
-        public static final Pose2d PROCESSOR = new Pose2d(14.0, 4.1, Rotation2d.fromDegrees(90));
+        public static final Pose2d PROCESSOR = new Pose2d(13.5, 4.035, Rotation2d.fromDegrees(90));
         
         // Field boundaries (with safety margin)
         public static final double FIELD_MARGIN = 0.5; // meters from edge

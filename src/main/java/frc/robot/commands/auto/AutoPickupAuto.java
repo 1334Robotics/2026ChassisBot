@@ -6,18 +6,31 @@ import frc.robot.Constants.FieldConstants;
 import frc.robot.subsystems.DriveSubsystem;
 
 /**
- * Pickup Cycles Auto: Practice pickup and scoring cycles.
- * Demonstrates rapid pickup from coral station and scoring on reef.
+ * Pickup Cycles Auto - FIRST Rebuilt 2025 Strategy
+ * 
+ * Game: FIRST Reefscape Rebuilt
+ * Objective: Practice rapid coral pickup and scoring cycles
+ * 
+ * Strategy (3-cycle auto):
+ * 1. Score preloaded coral on Reef Front (3 pts)
+ * 2. Cycle 1: Pickup from Coral Station → Score on Reef Left (3 pts)
+ * 3. Cycle 2: Pickup from Coral Station → Score on Reef Right (3 pts)
+ * 4. Return to safe zone
+ * 
+ * Points: 9 points (3 corals × 3 points each)
+ * Time: ~22-25 seconds
+ * Focus: Speed and efficiency in coral handling
  */
 public class AutoPickupAuto extends SequentialCommandGroup {
     
     public AutoPickupAuto(DriveSubsystem drive) {
         addCommands(
             Commands.runOnce(() -> {
-                System.out.println("\n========== PICKUP CYCLES AUTO ==========");
-                System.out.println("Strategy: Quick pickup and score cycles");
-                System.out.println("Target: 2 pickup cycles + preload");
-                System.out.println("========================================\n");
+                System.out.println("\n========== PICKUP CYCLES - FIRST REBUILT 2025 ==========");
+                System.out.println("Strategy: Rapid coral pickup and scoring cycles");
+                System.out.println("Target: 3 corals (preload + 2 pickups)");
+                System.out.println("Expected Points: 9 (3 × 3 pts)");
+                System.out.println("======================================================\n");
             }),
             
             Commands.runOnce(() -> drive.stop()),
