@@ -272,7 +272,13 @@ public class DriveSubsystem extends SubsystemBase {
                 
                 currentXSpeed = xInput * DriveConstants.MAX_SPEED_MPS;
                 currentYSpeed = yInput * DriveConstants.MAX_SPEED_MPS;
-                currentRotSpeed = rotInput * DriveConstants.MAX_ANGULAR_VELOCITY;
+                // Only apply rotation if actually commanding it - prevents phantom spinning
+                currentRotSpeed = (Math.abs(rotInput) > 0.01) ? rotInput * DriveConstants.MAX_ANGULAR_VELOCITY : 0.0;
+                
+                // Debug output to help diagnose spinning issues
+                SmartDashboard.putNumber("Debug/Raw Rot Input", rawRot);
+                SmartDashboard.putNumber("Debug/Processed Rot", rotInput);
+                SmartDashboard.putNumber("Debug/Final Omega", currentRotSpeed);
                 
                 ChassisSpeeds speeds = new ChassisSpeeds(currentXSpeed, currentYSpeed, currentRotSpeed);
                 driveFieldOrientedSafe(limitSpeeds(speeds));
@@ -285,25 +291,30 @@ public class DriveSubsystem extends SubsystemBase {
     }
     
     private void driveFieldOrientedSafe(ChassisSpeeds speeds) {
+        // Emergency spin mitigation: drive robot-oriented (no gyro dependency) to avoid phantom rotation
         if (Math.abs(speeds.vxMetersPerSecond) < SPEED_EPSILON &&
             Math.abs(speeds.vyMetersPerSecond) < SPEED_EPSILON &&
             Math.abs(speeds.omegaRadiansPerSecond) < SPEED_EPSILON) {
-            
             if (isInitialized()) {
                 try {
-                    swerveDrive.driveFieldOriented(new ChassisSpeeds(0, 0, 0));
+                    swerveDrive.drive(new Translation2d(0, 0), 0.0, false, true);
                 } catch (Exception e) {
-                    logError("driveFieldOriented (zero) error: " + e.getMessage());
+                    logError("drive (zero) error: " + e.getMessage());
                 }
             }
             return;
         }
-        
+
         if (isInitialized()) {
             try {
-                swerveDrive.driveFieldOriented(speeds);
+                // Robot-oriented: fieldRelative=false to remove gyro drift from control loop
+                swerveDrive.drive(
+                    new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond),
+                    speeds.omegaRadiansPerSecond,
+                    false,
+                    true);
             } catch (Exception e) {
-                logError("driveFieldOriented error: " + e.getMessage());
+                logError("drive error: " + e.getMessage());
             }
         } else if (RobotBase.isSimulation()) {
             updateSimulatedPose(speeds);
