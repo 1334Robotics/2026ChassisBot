@@ -88,6 +88,8 @@ public class RobotContainer {
     SmartDashboard.putNumber("Field/Blue Start Y", FieldConstants.BLUE_ALLIANCE_START.getY());
     SmartDashboard.putNumber("Field/Red Start X", FieldConstants.RED_ALLIANCE_START.getX());
     SmartDashboard.putNumber("Field/Red Start Y", FieldConstants.RED_ALLIANCE_START.getY());
+  SmartDashboard.putNumber("Field/Hub Rest X", FieldConstants.HUB_REST_POSITION.getX());
+  SmartDashboard.putNumber("Field/Hub Rest Y", FieldConstants.HUB_REST_POSITION.getY());
     
     // Control instructions
     SmartDashboard.putString("Controls/Left Stick", "Move Robot");
@@ -102,6 +104,13 @@ public class RobotContainer {
     SmartDashboard.putString("Controls/Y Button", "Reset to Center");
     SmartDashboard.putString("Controls/POV Down", "Reset Heading");
     SmartDashboard.putString("Controls/POV Up", "Zero Gyro & Sync Modules");
+
+    // Computer key (dashboard) to lock and rest near hub
+    SmartDashboard.putData("Drive/Hub Rest", Commands.runOnce(() -> {
+      m_DriveSubsystem.resetOdometry(FieldConstants.HUB_REST_POSITION);
+      m_DriveSubsystem.lock();
+      SmartDashboard.putString("Status/Last Action", "Hub Rest (Dashboard)");
+    }, m_DriveSubsystem).withName("HubRest"));
   }
 
   private void setupAutonomousChooser() {
@@ -188,6 +197,13 @@ public class RobotContainer {
       m_DriveSubsystem.resetOdometry(FieldConstants.CENTER_START);
       SmartDashboard.putString("Status/Last Action", "Reset to Center");
     }));
+
+    // Controller key to lock at hub rest position (press START)
+    driverXbox.start().onTrue(Commands.runOnce(() -> {
+      m_DriveSubsystem.resetOdometry(FieldConstants.HUB_REST_POSITION);
+      m_DriveSubsystem.lock();
+      SmartDashboard.putString("Status/Last Action", "Hub Rest (Start)");
+    }, m_DriveSubsystem));
 
     // Full speed mode (right trigger) - Remove duplicate deadband
     driverXbox.rightTrigger(ControllerConstants.TRIGGER_THRESHOLD)
