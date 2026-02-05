@@ -335,9 +335,10 @@ public class DriveSubsystem extends SubsystemBase {
         
         if (dt < SPEED_EPSILON) return;
         
-        double dx = speeds.vxMetersPerSecond * dt;
-        double dy = speeds.vyMetersPerSecond * dt;
-        double dTheta = speeds.omegaRadiansPerSecond * dt;
+    double dx = speeds.vxMetersPerSecond * dt;
+    double dy = speeds.vyMetersPerSecond * dt;
+    // Ensure CCW-positive convention in sim; flip if incoming omega is CW-positive
+    double dTheta = -speeds.omegaRadiansPerSecond * dt;
         
         Pose2d newPose = new Pose2d(
             simPose.getX() + dx,
@@ -357,7 +358,7 @@ public class DriveSubsystem extends SubsystemBase {
         
         if (isInitialized()) {
             try {
-                swerveDrive.driveFieldOriented(new ChassisSpeeds(0, 0, 0));
+                swerveDrive.drive(new Translation2d(0, 0), 0.0, false, true);
             } catch (Exception e) {
                 logError("Stop error: " + e.getMessage());
             }

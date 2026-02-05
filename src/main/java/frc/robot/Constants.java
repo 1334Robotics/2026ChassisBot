@@ -57,6 +57,9 @@ public final class Constants {
         
         // Processor station
         public static final Pose2d PROCESSOR = new Pose2d(13.5, 4.035, Rotation2d.fromDegrees(90));
+
+    // Convenient teleop rest position near the hub
+    public static final Pose2d HUB_REST_POSITION = new Pose2d(8.27, 4.5, Rotation2d.kZero);
         
         // Field boundaries (with safety margin)
         public static final double FIELD_MARGIN = 0.5; // meters from edge
