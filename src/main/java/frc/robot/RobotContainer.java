@@ -143,12 +143,7 @@ public class RobotContainer {
       m_DriveSubsystem.driveCommand(
         () -> -driverXbox.getLeftY(),
         () -> -driverXbox.getLeftX(),
-        () -> {
-          double rotValue = -driverXbox.getRightX();
-          // Apply deadband BEFORE scale to prevent drift from propagating
-          if (Math.abs(rotValue) < 0.1) return 0.0;
-          return rotValue * DriveConstants.ROTATION_SCALE;
-        }
+        () -> -driverXbox.getRightX() * DriveConstants.ROTATION_SCALE
       ).withName("DefaultDrive")
     );
   }
