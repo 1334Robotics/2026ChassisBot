@@ -39,6 +39,7 @@ public class DriveSubsystem extends SubsystemBase {
     private static final double ROTATION_DEADZONE = 0.25;  // Increased from 0.15 to prevent phantom spinning
     private static final double MAX_SPEED_LIMIT = 5.0;
     private static final double SPEED_EPSILON = 0.001;
+    private static final double SIM_FRICTION_DECAY = 0.92; // bleed-off to prevent oscillation in sim when setpoint goes to zero
     
     public DriveSubsystem(File directory) {
         field2d = new Field2d();
@@ -257,11 +258,29 @@ public class DriveSubsystem extends SubsystemBase {
                 if (Math.abs(xInput) < SPEED_EPSILON && 
                     Math.abs(yInput) < SPEED_EPSILON && 
                     Math.abs(rotInput) < SPEED_EPSILON) {
+                    // IMMEDIATE hard zero - prevent ANY residual velocity from persisting
+                    currentXSpeed = 0.0;
+                    currentYSpeed = 0.0;
+                    currentRotSpeed = 0.0;
                     
-                    if (Math.abs(currentXSpeed) > SPEED_EPSILON || 
-                        Math.abs(currentYSpeed) > SPEED_EPSILON || 
-                        Math.abs(currentRotSpeed) > SPEED_EPSILON) {
-                        stop();
+                    // Debug: confirm we're zeroing
+                    SmartDashboard.putNumber("Debug/Raw Rot Input", 0.0);
+                    SmartDashboard.putNumber("Debug/Processed Rot", 0.0);
+                    SmartDashboard.putNumber("Debug/Final Omega", 0.0);
+                    
+                    if (RobotBase.isSimulation()) {
+                        // In sim, bypass YAGSL entirely when stationary to prevent PID oscillation
+                        // Don't even call updateSimulatedPose - just update timestamp
+                        lastUpdateTime = Timer.getFPGATimestamp();
+                        return;
+                    }
+                    
+                    if (isInitialized()) {
+                        try {
+                            swerveDrive.drive(new Translation2d(0, 0), 0.0, false, false);
+                        } catch (Exception e) {
+                            logError("drive (zero-input) error: " + e.getMessage());
+                        }
                     }
                     return;
                 }
@@ -297,7 +316,7 @@ public class DriveSubsystem extends SubsystemBase {
             Math.abs(speeds.omegaRadiansPerSecond) < SPEED_EPSILON) {
             if (isInitialized()) {
                 try {
-                    swerveDrive.drive(new Translation2d(0, 0), 0.0, false, true);
+                    swerveDrive.drive(new Translation2d(0, 0), 0.0, false, false);
                 } catch (Exception e) {
                     logError("drive (zero) error: " + e.getMessage());
                 }
@@ -312,7 +331,7 @@ public class DriveSubsystem extends SubsystemBase {
                     new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond),
                     speeds.omegaRadiansPerSecond,
                     false,
-                    true);
+                    false);
             } catch (Exception e) {
                 logError("drive error: " + e.getMessage());
             }
@@ -322,9 +341,11 @@ public class DriveSubsystem extends SubsystemBase {
     }
     
     private void updateSimulatedPose(ChassisSpeeds speeds) {
-        if (Math.abs(speeds.vxMetersPerSecond) < SPEED_EPSILON &&
-            Math.abs(speeds.vyMetersPerSecond) < SPEED_EPSILON &&
-            Math.abs(speeds.omegaRadiansPerSecond) < SPEED_EPSILON) {
+        // Force absolute zero for any tiny inputs to prevent residual rotation
+        if (Math.abs(speeds.vxMetersPerSecond) < 0.05 &&
+            Math.abs(speeds.vyMetersPerSecond) < 0.05 &&
+            Math.abs(speeds.omegaRadiansPerSecond) < 0.05) {
+            // Hard stop - zero everything
             lastUpdateTime = Timer.getFPGATimestamp();
             return;
         }
@@ -335,10 +356,20 @@ public class DriveSubsystem extends SubsystemBase {
         
         if (dt < SPEED_EPSILON) return;
         
-    double dx = speeds.vxMetersPerSecond * dt;
-    double dy = speeds.vyMetersPerSecond * dt;
-    // Ensure CCW-positive convention in sim; flip if incoming omega is CW-positive
-    double dTheta = -speeds.omegaRadiansPerSecond * dt;
+        // Apply simple friction decay to bleed off residual motion when inputs drop to zero
+        double vx = speeds.vxMetersPerSecond * SIM_FRICTION_DECAY;
+        double vy = speeds.vyMetersPerSecond * SIM_FRICTION_DECAY;
+        double omega = speeds.omegaRadiansPerSecond * SIM_FRICTION_DECAY;
+        
+        // Aggressive clamp: if velocity is tiny, force to absolute zero to prevent oscillation
+        if (Math.abs(vx) < 0.02) vx = 0.0;
+        if (Math.abs(vy) < 0.02) vy = 0.0;
+        if (Math.abs(omega) < 0.02) omega = 0.0;
+
+        double dx = vx * dt;
+        double dy = vy * dt;
+        // WPILib/YAGSL expect CCW-positive; keep sign consistent
+        double dTheta = omega * dt;
         
         Pose2d newPose = new Pose2d(
             simPose.getX() + dx,
@@ -358,7 +389,9 @@ public class DriveSubsystem extends SubsystemBase {
         
         if (isInitialized()) {
             try {
-                swerveDrive.drive(new Translation2d(0, 0), 0.0, false, true);
+                // Re-disable heading correction to prevent PID oscillation at rest
+                swerveDrive.setHeadingCorrection(false);
+                swerveDrive.drive(new Translation2d(0, 0), 0.0, false, false);
             } catch (Exception e) {
                 logError("Stop error: " + e.getMessage());
             }
@@ -540,6 +573,26 @@ public class DriveSubsystem extends SubsystemBase {
     @Override 
     public void periodic() {
         try {
+            // In simulation, skip YAGSL queries when stationary to prevent PID oscillation
+            if (RobotBase.isSimulation() && 
+                Math.abs(currentXSpeed) < SPEED_EPSILON && 
+                Math.abs(currentYSpeed) < SPEED_EPSILON && 
+                Math.abs(currentRotSpeed) < SPEED_EPSILON) {
+                
+                field2d.setRobotPose(simPose);
+                SmartDashboard.putNumber("Drive/Pose X (m)", simPose.getX());
+                SmartDashboard.putNumber("Drive/Pose Y (m)", simPose.getY());
+                SmartDashboard.putNumber("Drive/Pose Rotation (deg)", simPose.getRotation().getDegrees());
+                SmartDashboard.putNumber("Drive/Heading (deg)", simPose.getRotation().getDegrees());
+                SmartDashboard.putNumber("Drive/X Velocity (m/s)", 0.0);
+                SmartDashboard.putNumber("Drive/Y Velocity (m/s)", 0.0);
+                SmartDashboard.putNumber("Drive/Rotation Velocity (rad/s)", 0.0);
+                SmartDashboard.putNumber("Drive/Total Speed (m/s)", 0.0);
+                SmartDashboard.putBoolean("Drive/Unexpected Rotation", false);
+                SmartDashboard.putBoolean("Drive/Simulation", true);
+                return;
+            }
+            
             Pose2d pose = getPose();
             field2d.setRobotPose(pose);
             
