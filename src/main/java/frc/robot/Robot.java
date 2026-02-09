@@ -95,23 +95,27 @@ public class Robot extends TimedRobot {
       // Small delay to ensure systems are ready
       Thread.sleep(100);
       
-      // Log position BEFORE getting autonomous command
-      Pose2d prePose = m_robotContainer.m_DriveSubsystem.getPose();
-      System.out.println("[Robot] Position BEFORE getAutonomousCommand: (" + 
-          String.format("%.2f, %.2f", prePose.getX(), prePose.getY()) + ")");
+      // Log position BEFORE getting autonomous command (only if DriveSubsystem available)
+      if (m_robotContainer.m_DriveSubsystem != null) {
+        Pose2d prePose = m_robotContainer.m_DriveSubsystem.getPose();
+        System.out.println("[Robot] Position BEFORE getAutonomousCommand: (" + 
+            String.format("%.2f, %.2f", prePose.getX(), prePose.getY()) + ")");
+      }
       
       // Get a fresh autonomous command each time
       m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
       // Log position AFTER getting autonomous command (but before scheduling)
-      Pose2d postPose = m_robotContainer.m_DriveSubsystem.getPose();
-      System.out.println("[Robot] Position AFTER getAutonomousCommand: (" + 
-          String.format("%.2f, %.2f", postPose.getX(), postPose.getY()) + ")");
+      if (m_robotContainer.m_DriveSubsystem != null) {
+        Pose2d postPose = m_robotContainer.m_DriveSubsystem.getPose();
+        System.out.println("[Robot] Position AFTER getAutonomousCommand: (" + 
+            String.format("%.2f, %.2f", postPose.getX(), postPose.getY()) + ")");
       
-      // Verify robot is on field before starting autonomous
-      if (!isValidFieldPosition(postPose)) {
-        DriverStation.reportWarning("WARNING: Robot starting position outside field bounds! Pos: (" + 
-            String.format("%.2f, %.2f", postPose.getX(), postPose.getY()) + ")", false);
+        // Verify robot is on field before starting autonomous
+        if (!isValidFieldPosition(postPose)) {
+          DriverStation.reportWarning("WARNING: Robot starting position outside field bounds! Pos: (" + 
+              String.format("%.2f, %.2f", postPose.getX(), postPose.getY()) + ")", false);
+        }
       }
 
       // Schedule the autonomous command

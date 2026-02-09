@@ -33,7 +33,7 @@ import frc.robot.subsystems.LimelightVision;
 
 public class RobotContainer {
 
-  public final DriveSubsystem m_DriveSubsystem;
+  public DriveSubsystem m_DriveSubsystem;  // Not final - may fail to initialize
   private final CommandXboxController driverXbox;
   private final CommandXboxController m_operatorController;
   private LimelightVision limelightVision;
@@ -44,23 +44,33 @@ public class RobotContainer {
     driverXbox = new CommandXboxController(ControllerConstants.DRIVER_CONTROLLER_PORT);
     m_operatorController = new CommandXboxController(1);
     
-    // Initialize drive subsystem
-    m_DriveSubsystem = new DriveSubsystem(new File(Filesystem.getDeployDirectory(), "SWERVE"));
+    // Initialize drive subsystem (wrapped in try-catch to allow robot to start even if it fails)
+    try {
+      m_DriveSubsystem = new DriveSubsystem(new File(Filesystem.getDeployDirectory(), "SWERVE"));
+      System.out.println("[RobotContainer] DriveSubsystem initialized successfully");
+      
+      // Set initial robot position - START AT BLUE ALLIANCE
+      m_DriveSubsystem.resetOdometry(FieldConstants.BLUE_ALLIANCE_START);
+      System.out.println("[RobotContainer] Robot initialized at Blue Alliance start: (" + 
+          String.format("%.2f, %.2f", FieldConstants.BLUE_ALLIANCE_START.getX(), 
+          FieldConstants.BLUE_ALLIANCE_START.getY()) + ")");
+    } catch (Exception e) {
+      DriverStation.reportError("DriveSubsystem initialization failed: " + e.getMessage(), e.getStackTrace());
+      System.err.println("[RobotContainer] CRITICAL: DriveSubsystem failed to initialize - robot will run in limited mode");
+      e.printStackTrace();
+      // m_DriveSubsystem will be null, checks will be needed in methods that use it
+    }
     
     // Initialize vision (optional - won't crash if it fails)
     try {
       limelightVision = new LimelightVision();
-      limelightVision.setDriveSubsystem(m_DriveSubsystem);
+      if (m_DriveSubsystem != null) {
+        limelightVision.setDriveSubsystem(m_DriveSubsystem);
+      }
     } catch (Exception e) {
       DriverStation.reportWarning("LimelightVision initialization failed: " + e.getMessage(), false);
       limelightVision = null;
     }
-
-    // Set initial robot position - START AT BLUE ALLIANCE
-    m_DriveSubsystem.resetOdometry(FieldConstants.BLUE_ALLIANCE_START);
-    System.out.println("[RobotContainer] Robot initialized at Blue Alliance start: (" + 
-        String.format("%.2f, %.2f", FieldConstants.BLUE_ALLIANCE_START.getX(), 
-        FieldConstants.BLUE_ALLIANCE_START.getY()) + ")");
 
     // Configure commands and bindings
     configureDefaultCommand();
@@ -116,39 +126,53 @@ public class RobotContainer {
   private void setupAutonomousChooser() {
     autoChooser = new SendableChooser<>();
     autoChooser.setDefaultOption("Do Nothing", Autos.doNothingAuto());
-    autoChooser.addOption("Drive Forward", Autos.driveForwardAuto(m_DriveSubsystem));
     
-    // Basic scoring autos
-    autoChooser.addOption("Simple (Reef)", new SimpleAuto(m_DriveSubsystem));
-    autoChooser.addOption("Safe Score (1 piece)", new AutoSafeScore(m_DriveSubsystem));
-    
-    // Multi-piece autos
-    autoChooser.addOption("Sequential (2 pieces)", new SequentialAuto(m_DriveSubsystem));
-    autoChooser.addOption("Triple Score (3 pieces)", new AutoTripleScore(m_DriveSubsystem));
-    
-    // Specialized autos
-    autoChooser.addOption("Avoid Collision", new AutoAvoidCollision(m_DriveSubsystem));
-    autoChooser.addOption("Algae Removal", new AutoAlgaeAuto(m_DriveSubsystem));
-    autoChooser.addOption("Processor Scoring", new AutoProcessorAuto(m_DriveSubsystem));
-    autoChooser.addOption("Complex Path", new AutoComplexPath(m_DriveSubsystem));
-    autoChooser.addOption("Balance", new AutoBalance(m_DriveSubsystem));
-    autoChooser.addOption("Pickup Cycles", new AutoPickupAuto(m_DriveSubsystem));
-    autoChooser.addOption("Figure 8 Pattern", new AutoFigure8(m_DriveSubsystem));
+    // Only add drive-dependent autos if DriveSubsystem initialized successfully
+    if (m_DriveSubsystem != null) {
+      autoChooser.addOption("Drive Forward", Autos.driveForwardAuto(m_DriveSubsystem));
+      
+      // Basic scoring autos
+      autoChooser.addOption("Simple (Reef)", new SimpleAuto(m_DriveSubsystem));
+      autoChooser.addOption("Safe Score (1 piece)", new AutoSafeScore(m_DriveSubsystem));
+      
+      // Multi-piece autos
+      autoChooser.addOption("Sequential (2 pieces)", new SequentialAuto(m_DriveSubsystem));
+      autoChooser.addOption("Triple Score (3 pieces)", new AutoTripleScore(m_DriveSubsystem));
+      
+      // Specialized autos
+      autoChooser.addOption("Avoid Collision", new AutoAvoidCollision(m_DriveSubsystem));
+      autoChooser.addOption("Algae Removal", new AutoAlgaeAuto(m_DriveSubsystem));
+      autoChooser.addOption("Processor Scoring", new AutoProcessorAuto(m_DriveSubsystem));
+      autoChooser.addOption("Complex Path", new AutoComplexPath(m_DriveSubsystem));
+      autoChooser.addOption("Balance", new AutoBalance(m_DriveSubsystem));
+      autoChooser.addOption("Pickup Cycles", new AutoPickupAuto(m_DriveSubsystem));
+      autoChooser.addOption("Figure 8 Pattern", new AutoFigure8(m_DriveSubsystem));
+    } else {
+      DriverStation.reportWarning("DriveSubsystem not initialized - limited autonomous options available", false);
+    }
     
     SmartDashboard.putData("Auto Chooser", autoChooser);
   }
 
   private void configureDefaultCommand() {
-    m_DriveSubsystem.setDefaultCommand(
-      m_DriveSubsystem.driveCommand(
-        () -> -driverXbox.getLeftY(),
-        () -> -driverXbox.getLeftX(),
-        () -> -driverXbox.getRightX() * DriveConstants.ROTATION_SCALE
-      ).withName("DefaultDrive")
-    );
+    if (m_DriveSubsystem != null) {
+      m_DriveSubsystem.setDefaultCommand(
+        m_DriveSubsystem.driveCommand(
+          () -> -driverXbox.getLeftY(),
+          () -> -driverXbox.getLeftX(),
+          () -> -driverXbox.getRightX() * DriveConstants.ROTATION_SCALE
+        ).withName("DefaultDrive")
+      );
+    }
   }
 
   private void configureBindings() {
+    // Skip binding drive commands if DriveSubsystem failed to initialize
+    if (m_DriveSubsystem == null) {
+      DriverStation.reportWarning("DriveSubsystem not available - skipping drive button bindings", false);
+      return;
+    }
+    
     // Speed control with bumpers
     driverXbox.rightBumper().onTrue(Commands.runOnce(() -> {
       SmartDashboard.putString("Status/Last Action", "Speed increased");
@@ -233,17 +257,19 @@ public class RobotContainer {
     driverXbox.a()
       .onTrue(Commands.runOnce(() -> SmartDashboard.putString("Status/Last Action", "Running Auto Test")))
       .whileTrue(
-        Commands.defer(this::getAutonomousCommand, Set.of(m_DriveSubsystem))
+        Commands.defer(this::getAutonomousCommand, m_DriveSubsystem != null ? Set.of(m_DriveSubsystem) : Set.of())
       );
     
     // Initialize status
     SmartDashboard.putString("Status/Speed Mode", "Normal");
     SmartDashboard.putString("Status/Last Action", "Ready");
 
-    // Operator diagnostics
-    m_operatorController.a().onTrue(Commands.runOnce(m_DriveSubsystem::printEncoderOffsets));
-    m_operatorController.b().onTrue(Commands.runOnce(m_DriveSubsystem::diagnoseGyro));
-    m_operatorController.x().onTrue(Commands.runOnce(m_DriveSubsystem::diagnoseMotorInversions));
+    // Operator diagnostics (only if DriveSubsystem available)
+    if (m_DriveSubsystem != null) {
+      m_operatorController.a().onTrue(Commands.runOnce(m_DriveSubsystem::printEncoderOffsets));
+      m_operatorController.b().onTrue(Commands.runOnce(m_DriveSubsystem::diagnoseGyro));
+      m_operatorController.x().onTrue(Commands.runOnce(m_DriveSubsystem::diagnoseMotorInversions));
+    }
   }
   
   /**
@@ -251,6 +277,12 @@ public class RobotContainer {
    * Always ensures robot starts at correct field position.
    */
   public Command getAutonomousCommand() {
+    // If DriveSubsystem failed to initialize, return do-nothing command
+    if (m_DriveSubsystem == null) {
+      DriverStation.reportWarning("Cannot run autonomous - DriveSubsystem not initialized", false);
+      return Autos.doNothingAuto();
+    }
+    
     // Get selected starting position from dashboard or default to blue
     String allianceColor = SmartDashboard.getString("Alliance/Color", "Blue");
     
@@ -274,6 +306,11 @@ public class RobotContainer {
    * Called when teleop starts.
    */
   public void teleopInit() {
+    if (m_DriveSubsystem == null) {
+      DriverStation.reportWarning("DriveSubsystem not available for teleop", false);
+      return;
+    }
+    
     // Reset to Blue Alliance start at teleop begin
     m_DriveSubsystem.resetOdometry(FieldConstants.BLUE_ALLIANCE_START);
     System.out.println("Teleop initialized - odometry reset to Blue Alliance start");
