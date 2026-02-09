@@ -1,0 +1,15 @@
+{
+  "imu": {
+    "type": "pigeon2",
+    "id": 50,
+    "canbus": null
+  },
+  "invertedIMU": true,
+  "modules": [
+    "Frontleft.json",
+    "Frontright.json",
+    "Backleft.json",
+    "Backright.json"
+  ],
+  "note": "Check IMU inversion."
+}

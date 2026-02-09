@@ -1,0 +1,28 @@
+package frc.robot;
+
+import edu.wpi.first.wpilibj.XboxController;
+
+public class Input {
+    public static final XboxController driveController = new XboxController(0);
+    
+    public static double getTranslationX() {
+        return driveController.getLeftX();
+    }
+
+    public static void testInput() {
+        // Example usage of getTranslationX and getTranslationY to remove the unused method warning
+        double translationX = getTranslationX();
+        double translationY = getTranslationY();
+        System.out.println("Translation X: " + translationX);
+        System.out.println("Translation Y: " + translationY);
+    }
+    // getting the information neccessary for driving the robot
+    public static double getTranslationY() {
+        double value = driveController.getLeftY();
+        return value;
+    }
+
+    public static double getRotation() {
+        return driveController.getRightX();
+    }
+}
