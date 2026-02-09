@@ -21,7 +21,7 @@ import com.revrobotics.spark.SparkAbsoluteEncoder;
 public class SwerveModule {
     private static final double kMaxSpeed = 4.5; // m/s
 
-    private SparkMax driveMotor;
+    private final SparkMax driveMotor;
     private final SparkMax turningMotor;
     private final SparkAbsoluteEncoder turningEncoder;
     private final PIDController turningPIDController;

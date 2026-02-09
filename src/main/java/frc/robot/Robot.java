@@ -116,7 +116,7 @@ public class Robot extends TimedRobot {
 
       // Schedule the autonomous command
       if (m_autonomousCommand != null) {
-        m_autonomousCommand.schedule();
+        CommandScheduler.getInstance().schedule(m_autonomousCommand);
         SmartDashboard.putString("Status/Auto Running", m_autonomousCommand.getName());
         System.out.println("[Robot] Autonomous scheduled: " + m_autonomousCommand.getName());
       } else {
