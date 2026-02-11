@@ -115,12 +115,14 @@ public class RobotContainer {
     SmartDashboard.putString("Controls/POV Down", "Reset Heading");
     SmartDashboard.putString("Controls/POV Up", "Zero Gyro & Sync Modules");
 
-    // Computer key (dashboard) to lock and rest near hub
-    SmartDashboard.putData("Drive/Hub Rest", Commands.runOnce(() -> {
-      m_DriveSubsystem.resetOdometry(FieldConstants.HUB_REST_POSITION);
-      m_DriveSubsystem.lock();
-      SmartDashboard.putString("Status/Last Action", "Hub Rest (Dashboard)");
-    }, m_DriveSubsystem).withName("HubRest"));
+    // Computer key (dashboard) to lock and rest near hub (only if DriveSubsystem available)
+    if (m_DriveSubsystem != null) {
+      SmartDashboard.putData("Drive/Hub Rest", Commands.runOnce(() -> {
+        m_DriveSubsystem.resetOdometry(FieldConstants.HUB_REST_POSITION);
+        m_DriveSubsystem.lock();
+        SmartDashboard.putString("Status/Last Action", "Hub Rest (Dashboard)");
+      }, m_DriveSubsystem).withName("HubRest"));
+    }
   }
 
   private void setupAutonomousChooser() {
