@@ -3,7 +3,6 @@ package frc.robot;
 import java.io.File;
 import java.util.Set;
 
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -30,6 +29,7 @@ import frc.robot.commands.auto.SequentialAuto;
 import frc.robot.commands.auto.SimpleAuto;
 import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.LimelightVision;
+import com.pathplanner.lib.auto.AutoBuilder;
 
 public class RobotContainer {
 
@@ -126,31 +126,32 @@ public class RobotContainer {
   }
 
   private void setupAutonomousChooser() {
-    autoChooser = new SendableChooser<>();
-    autoChooser.setDefaultOption("Do Nothing", Autos.doNothingAuto());
-    
-    // Only add drive-dependent autos if DriveSubsystem initialized successfully
-    if (m_DriveSubsystem != null) {
-      autoChooser.addOption("Drive Forward", Autos.driveForwardAuto(m_DriveSubsystem));
-      
-      // Basic scoring autos
-      autoChooser.addOption("Simple (Reef)", new SimpleAuto(m_DriveSubsystem));
-      autoChooser.addOption("Safe Score (1 piece)", new AutoSafeScore(m_DriveSubsystem));
-      
-      // Multi-piece autos
-      autoChooser.addOption("Sequential (2 pieces)", new SequentialAuto(m_DriveSubsystem));
-      autoChooser.addOption("Triple Score (3 pieces)", new AutoTripleScore(m_DriveSubsystem));
-      
-      // Specialized autos
-      autoChooser.addOption("Avoid Collision", new AutoAvoidCollision(m_DriveSubsystem));
-      autoChooser.addOption("Algae Removal", new AutoAlgaeAuto(m_DriveSubsystem));
-      autoChooser.addOption("Processor Scoring", new AutoProcessorAuto(m_DriveSubsystem));
-      autoChooser.addOption("Complex Path", new AutoComplexPath(m_DriveSubsystem));
-      autoChooser.addOption("Balance", new AutoBalance(m_DriveSubsystem));
-      autoChooser.addOption("Pickup Cycles", new AutoPickupAuto(m_DriveSubsystem));
-      autoChooser.addOption("Figure 8 Pattern", new AutoFigure8(m_DriveSubsystem));
+    // Use PathPlanner's AutoBuilder if configured, otherwise fall back to manual chooser
+    if (m_DriveSubsystem != null && AutoBuilder.isConfigured()) {
+      // PathPlanner auto chooser - reads autos from src/main/deploy/pathplanner/autos/
+      autoChooser = AutoBuilder.buildAutoChooser();
+      System.out.println("[RobotContainer] PathPlanner AutoBuilder chooser configured");
     } else {
-      DriverStation.reportWarning("DriveSubsystem not initialized - limited autonomous options available", false);
+      // Fallback: manual auto chooser
+      autoChooser = new SendableChooser<>();
+      autoChooser.setDefaultOption("Do Nothing", Autos.doNothingAuto());
+      
+      if (m_DriveSubsystem != null) {
+        autoChooser.addOption("Drive Forward", Autos.driveForwardAuto(m_DriveSubsystem));
+        autoChooser.addOption("Simple (Reef)", new SimpleAuto(m_DriveSubsystem));
+        autoChooser.addOption("Safe Score (1 piece)", new AutoSafeScore(m_DriveSubsystem));
+        autoChooser.addOption("Sequential (2 pieces)", new SequentialAuto(m_DriveSubsystem));
+        autoChooser.addOption("Triple Score (3 pieces)", new AutoTripleScore(m_DriveSubsystem));
+        autoChooser.addOption("Avoid Collision", new AutoAvoidCollision(m_DriveSubsystem));
+        autoChooser.addOption("Algae Removal", new AutoAlgaeAuto(m_DriveSubsystem));
+        autoChooser.addOption("Processor Scoring", new AutoProcessorAuto(m_DriveSubsystem));
+        autoChooser.addOption("Complex Path", new AutoComplexPath(m_DriveSubsystem));
+        autoChooser.addOption("Balance", new AutoBalance(m_DriveSubsystem));
+        autoChooser.addOption("Pickup Cycles", new AutoPickupAuto(m_DriveSubsystem));
+        autoChooser.addOption("Figure 8 Pattern", new AutoFigure8(m_DriveSubsystem));
+      } else {
+        DriverStation.reportWarning("DriveSubsystem not initialized - limited autonomous options available", false);
+      }
     }
     
     SmartDashboard.putData("Auto Chooser", autoChooser);
@@ -276,7 +277,7 @@ public class RobotContainer {
   
   /**
    * Get the autonomous command to run.
-   * Always ensures robot starts at correct field position.
+   * Uses PathPlanner auto chooser if configured, otherwise falls back to manual chooser.
    */
   public Command getAutonomousCommand() {
     // If DriveSubsystem failed to initialize, return do-nothing command
@@ -285,23 +286,15 @@ public class RobotContainer {
       return Autos.doNothingAuto();
     }
     
-    // Get selected starting position from dashboard or default to blue
-    String allianceColor = SmartDashboard.getString("Alliance/Color", "Blue");
-    
-    Pose2d startingPose = allianceColor.equals("Red") ? 
-        FieldConstants.RED_ALLIANCE_START : 
-        FieldConstants.BLUE_ALLIANCE_START;
-    
-    // Reset to correct starting position for selected alliance
-    m_DriveSubsystem.stop();
-    m_DriveSubsystem.zeroGyro();
-    m_DriveSubsystem.resetOdometry(startingPose);
-    
-    // Get command from SendableChooser instead of string
+    // Get command from auto chooser (PathPlanner or manual)
     Command selectedAuto = autoChooser.getSelected();
-    System.out.println("[RobotContainer] Selected autonomous: " + selectedAuto.getName());
     
-    return selectedAuto != null ? selectedAuto : Autos.doNothingAuto();
+    if (selectedAuto != null) {
+      System.out.println("[RobotContainer] Selected autonomous: " + selectedAuto.getName());
+      return selectedAuto;
+    }
+    
+    return Autos.doNothingAuto();
   }
 
   /**

@@ -16,6 +16,12 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.DriveConstants;
 import swervelib.SwerveDrive;
 import swervelib.parser.SwerveParser;
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.config.PIDConstants;
+import com.pathplanner.lib.config.RobotConfig;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import edu.wpi.first.wpilibj.DriverStation;
+
 
 public class DriveSubsystem extends SubsystemBase {
     private SwerveDrive swerveDrive;
@@ -66,7 +72,7 @@ public class DriveSubsystem extends SubsystemBase {
                     logDebug("  - " + f.getName());
                 }
             }
-            
+
             logDebug("Creating SwerveDrive with max speed: " + DriveConstants.MAX_SPEED_MPS + " m/s");
             logDebug("Running in " + (RobotBase.isSimulation() ? "SIMULATION" : "REAL") + " mode");
             
@@ -113,6 +119,9 @@ public class DriveSubsystem extends SubsystemBase {
             SmartDashboard.putBoolean("Drive/Initialized", true);
             logDebug("Swerve drive initialized successfully");
             
+            // Configure PathPlanner after successful swerve init
+            configurePathPlanner();
+            
         } catch (Exception e) {
             logError("FATAL ERROR during swerve initialization: " + e.getMessage());
             e.printStackTrace();
@@ -124,6 +133,47 @@ public class DriveSubsystem extends SubsystemBase {
         SmartDashboard.putNumber("Drive/Max Angular Velocity (rad/s)", DriveConstants.MAX_ANGULAR_VELOCITY);
     }
     
+    /**
+     * Configure PathPlanner's AutoBuilder for autonomous path following.
+     * Must be called after YAGSL swerve drive is initialized.
+     */
+    private void configurePathPlanner() {
+        try {
+            RobotConfig config = RobotConfig.fromGUISettings();
+
+            AutoBuilder.configure(
+                this::getPose,                    // Pose supplier
+                this::resetOdometry,              // Pose reset consumer
+                this::getRobotRelativeSpeeds,     // ChassisSpeeds supplier (robot-relative)
+                (speeds, feedforwards) -> driveFieldOriented(speeds), // Drive consumer
+                new PPHolonomicDriveController(
+                    new PIDConstants(5.0, 0.0, 0.0),   // Translation PID
+                    new PIDConstants(5.0, 0.0, 0.0)    // Rotation PID
+                ),
+                config,
+                () -> {
+                    // Flip path for red alliance
+                    var alliance = DriverStation.getAlliance();
+                    return alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red;
+                },
+                this                              // Subsystem requirement
+            );
+            logDebug("PathPlanner AutoBuilder configured successfully");
+        } catch (Exception e) {
+            DriverStation.reportError("PathPlanner config failed: " + e.getMessage(), e.getStackTrace());
+        }
+    }
+
+    /**
+     * Get the robot-relative chassis speeds (used by PathPlanner).
+     */
+    public ChassisSpeeds getRobotRelativeSpeeds() {
+        if (isInitialized()) {
+            return swerveDrive.getRobotVelocity();
+        }
+        return new ChassisSpeeds();
+    }
+
     private void verifyModules() {
         var modules = swerveDrive.getModules();
         logDebug("Loaded " + modules.length + " swerve modules");
