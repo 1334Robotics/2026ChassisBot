@@ -256,12 +256,11 @@ public class RobotContainer {
         ).withName("PrecisionDrive")
       );
     
-    // Test auto with A button
+    // Test: A button = pure forward drive (1 m/s, no joystick, no field-relative)
+    // If robot spins during this, the issue is module config. If straight, issue is joystick/field-relative.
     driverXbox.a()
-      .onTrue(Commands.runOnce(() -> SmartDashboard.putString("Status/Last Action", "Running Auto Test")))
-      .whileTrue(
-        Commands.defer(this::getAutonomousCommand, m_DriveSubsystem != null ? Set.of(m_DriveSubsystem) : Set.of())
-      );
+      .onTrue(Commands.runOnce(() -> SmartDashboard.putString("Status/Last Action", "TEST FORWARD DRIVE")))
+      .whileTrue(m_DriveSubsystem.testDriveForwardCommand());
     
     // Initialize status
     SmartDashboard.putString("Status/Speed Mode", "Normal");

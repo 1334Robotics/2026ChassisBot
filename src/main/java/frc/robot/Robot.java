@@ -189,6 +189,12 @@ public class Robot extends TimedRobot {
     SmartDashboard.putBoolean("Robot/Enabled", true);
     // Cancels all running commands at the start of test mode.
     CommandScheduler.getInstance().cancelAll();
+    
+    // Auto-start the forward drive diagnostic
+    if (robotInitialized && m_robotContainer != null && m_robotContainer.m_DriveSubsystem != null) {
+      m_robotContainer.m_DriveSubsystem.testDriveForwardCommand().schedule();
+      System.out.println("[TEST] Auto-started testDriveForwardCommand");
+    }
   }
 
   /** This function is called periodically during test mode. */
