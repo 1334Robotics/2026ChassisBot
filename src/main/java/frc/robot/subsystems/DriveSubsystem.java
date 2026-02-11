@@ -21,6 +21,7 @@ import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import edu.wpi.first.wpilibj.DriverStation;
+@SuppressWarnings("unused")
 
 
 public class DriveSubsystem extends SubsystemBase {
@@ -78,21 +79,18 @@ public class DriveSubsystem extends SubsystemBase {
             
             swerveDrive = new SwerveParser(swerveJsonDirectory).createSwerveDrive(DriveConstants.MAX_SPEED_MPS);
             
-            // CRITICAL: Disable heading correction to prevent phantom spinning
-            // Heading correction tries to maintain heading when not rotating, but can cause unwanted rotation
+            // Match YAGSL official example configuration:
+            // 1. Heading correction should only be used while controlling via angle setpoint
             swerveDrive.setHeadingCorrection(false);
+            // 2. Disable cosine compensation — causes discrepancies in simulation
+            swerveDrive.setCosineCompensator(false);
+            // 3. Correct for skew that gets worse as angular velocity increases
+            swerveDrive.setAngularVelocityCompensation(true, true, 0.1);
+            // 4. Disable auto-synchronize to prevent jitter
+            swerveDrive.setModuleEncoderAutoSynchronize(false, 1);
             
             verifyModules();
             initialized = true;
-            
-            if (swerveDrive != null) {
-                try {
-                    swerveDrive.drive(new Translation2d(0, 0), 0, false, false);
-                    Thread.sleep(100);
-                } catch (Exception e) {
-                    logDebug("Initial drive stop: " + e.getMessage());
-                }
-            }
             
             try {
                 if (swerveDrive != null) {
@@ -105,16 +103,6 @@ public class DriveSubsystem extends SubsystemBase {
             }
             
             zeroGyro();
-            synchronizeModuleEncoders();
-            
-            if (swerveDrive != null) {
-                try {
-                    swerveDrive.driveFieldOriented(new ChassisSpeeds(0, 0, 0));
-                    Thread.sleep(100);
-                } catch (Exception e) {
-                    logDebug("Post-zero stop: " + e.getMessage());
-                }
-            }
             
             SmartDashboard.putBoolean("Drive/Initialized", true);
             logDebug("Swerve drive initialized successfully");
@@ -283,53 +271,33 @@ public class DriveSubsystem extends SubsystemBase {
     
     public Command driveCommand(DoubleSupplier translationX, DoubleSupplier translationY, 
                                 DoubleSupplier rotationX) {
+        // Matches YAGSL official example: driveCommand(DoubleSupplier, DoubleSupplier, DoubleSupplier)
         return run(() -> {
-            if (!isReadyToDrive()) {
-                stop();
-                SmartDashboard.putString("Debug/DriveState", "NOT READY - waiting for startup");
+            if (!isInitialized()) {
                 return;
             }
             
             try {
-                double rawX = translationX.getAsDouble();
-                double rawY = translationY.getAsDouble();
-                double rawRot = rotationX.getAsDouble();
+                double xInput = translationX.getAsDouble();
+                double yInput = translationY.getAsDouble();
+                double rotInput = rotationX.getAsDouble();
                 
-                double xInput = applyDeadzone(rawX);
-                double yInput = applyDeadzone(rawY);
-                double rotInput = applyRotationDeadzone(rawRot);
+                // Apply deadzone
+                xInput = applyDeadzone(xInput);
+                yInput = applyDeadzone(yInput);
+                rotInput = applyRotationDeadzone(rotInput);
                 
-                // Debug: show exactly what the inputs are at every stage
-                SmartDashboard.putNumber("Debug/Raw X", rawX);
-                SmartDashboard.putNumber("Debug/Raw Y", rawY);
-                SmartDashboard.putNumber("Debug/Raw Rot", rawRot);
-                SmartDashboard.putNumber("Debug/After Deadzone X", xInput);
-                SmartDashboard.putNumber("Debug/After Deadzone Y", yInput);
-                SmartDashboard.putNumber("Debug/After Deadzone Rot", rotInput);
+                // Scale to velocity (m/s and rad/s)
+                currentXSpeed = xInput * swerveDrive.getMaximumChassisVelocity();
+                currentYSpeed = yInput * swerveDrive.getMaximumChassisVelocity();
+                currentRotSpeed = Math.pow(rotInput, 3) * swerveDrive.getMaximumChassisAngularVelocity();
                 
-                xInput = clamp(xInput, -1.0, 1.0);
-                yInput = clamp(yInput, -1.0, 1.0);
-                rotInput = clamp(rotInput, -1.0, 1.0);
-                
-                currentXSpeed = xInput * DriveConstants.MAX_SPEED_MPS;
-                currentYSpeed = yInput * DriveConstants.MAX_SPEED_MPS;
-                currentRotSpeed = rotInput * DriveConstants.MAX_ANGULAR_VELOCITY;
-                
-                SmartDashboard.putNumber("Debug/Final vX", currentXSpeed);
-                SmartDashboard.putNumber("Debug/Final vY", currentYSpeed);
-                SmartDashboard.putNumber("Debug/Final Omega", currentRotSpeed);
-                SmartDashboard.putString("Debug/DriveState", "DRIVING");
-                
-                // ALWAYS use YAGSL for driving — it handles both real and sim internally.
-                // Trying to bypass YAGSL in sim caused the oscillation because YAGSL's own
-                // periodic() still runs and conflicts with our manual sim pose.
-                if (isInitialized()) {
-                    swerveDrive.drive(
-                        new Translation2d(currentXSpeed, currentYSpeed),
-                        currentRotSpeed,
-                        false,   // robot-oriented to avoid gyro issues
-                        false);  // closed-loop for stable sim
-                }
+                // Drive using YAGSL — field-relative, closed-loop (matching YAGSL example)
+                swerveDrive.drive(
+                    new Translation2d(currentXSpeed, currentYSpeed),
+                    currentRotSpeed,
+                    true,
+                    false);
                 
             } catch (Exception e) {
                 logError("Drive command error: " + e.getMessage());
@@ -339,6 +307,73 @@ public class DriveSubsystem extends SubsystemBase {
     }
     
     // Removed deprecated driveFieldOrientedSafe - all drive paths now use YAGSL consistently
+
+    private long diagPrintCounter = 0;
+
+    /**
+     * Diagnostic command: drives the robot at a fixed 1 m/s forward using robot-relative ChassisSpeeds.
+     * Logs detailed module state info to identify spinning root cause.
+     */
+    public Command testDriveForwardCommand() {
+        return run(() -> {
+            if (isInitialized()) {
+                ChassisSpeeds desired = new ChassisSpeeds(1.0, 0.0, 0.0);
+                
+                // Drive robot-relative, closed-loop
+                swerveDrive.drive(desired);
+                
+                // Log what kinematics WANTS vs what modules ACTUALLY report
+                var desiredStates = swerveDrive.kinematics.toSwerveModuleStates(desired);
+                var modules = swerveDrive.getModules();
+                String[] names = {"FL", "FR", "BL", "BR"};
+                boolean shouldPrint = (diagPrintCounter++ % 50 == 0); // Print every 1 second at 50Hz
+                
+                if (shouldPrint) {
+                    System.out.println("=== DIAG: ChassisSpeeds(1,0,0) robot-relative ===");
+                    System.out.printf("  Heading: %.2f deg%n", swerveDrive.getOdometryHeading().getDegrees());
+                }
+                
+                for (int i = 0; i < modules.length; i++) {
+                    var actual = modules[i].getState();
+                    SmartDashboard.putNumber("Diag/" + names[i] + "/DesiredAngle", desiredStates[i].angle.getDegrees());
+                    SmartDashboard.putNumber("Diag/" + names[i] + "/DesiredSpeed", desiredStates[i].speedMetersPerSecond);
+                    SmartDashboard.putNumber("Diag/" + names[i] + "/ActualAngle", actual.angle.getDegrees());
+                    SmartDashboard.putNumber("Diag/" + names[i] + "/ActualSpeed", actual.speedMetersPerSecond);
+                    SmartDashboard.putNumber("Diag/" + names[i] + "/AngleError", 
+                        desiredStates[i].angle.getDegrees() - actual.angle.getDegrees());
+                    
+                    // Also log maple-sim direct state if available
+                    var simMod = modules[i].getSimModule();
+                    if (simMod != null && simMod.mapleSimModule != null) {
+                        var simState = simMod.mapleSimModule.getMeasuredState();
+                        SmartDashboard.putNumber("Diag/" + names[i] + "/SimAngle", simState.angle.getDegrees());
+                        SmartDashboard.putNumber("Diag/" + names[i] + "/SimSpeed", simState.speedMetersPerSecond);
+                    }
+                    
+                    if (shouldPrint) {
+                        System.out.printf("  %s: desired(%.1f°, %.2f m/s) actual(%.1f°, %.2f m/s) err=%.1f°%n",
+                            names[i],
+                            desiredStates[i].angle.getDegrees(), desiredStates[i].speedMetersPerSecond,
+                            actual.angle.getDegrees(), actual.speedMetersPerSecond,
+                            desiredStates[i].angle.getDegrees() - actual.angle.getDegrees());
+                    }
+                }
+                var velocity = swerveDrive.getRobotVelocity();
+                SmartDashboard.putNumber("Diag/ActualVx", velocity.vxMetersPerSecond);
+                SmartDashboard.putNumber("Diag/ActualVy", velocity.vyMetersPerSecond);
+                SmartDashboard.putNumber("Diag/ActualOmega", velocity.omegaRadiansPerSecond);
+                SmartDashboard.putNumber("Diag/Heading", swerveDrive.getOdometryHeading().getDegrees());
+                
+                if (shouldPrint) {
+                    System.out.printf("  Velocity: vx=%.2f vy=%.2f omega=%.3f rad/s%n",
+                        velocity.vxMetersPerSecond, velocity.vyMetersPerSecond, velocity.omegaRadiansPerSecond);
+                    System.out.printf("  Pose: (%.2f, %.2f) @ %.1f°%n",
+                        swerveDrive.getPose().getX(), swerveDrive.getPose().getY(),
+                        swerveDrive.getPose().getRotation().getDegrees());
+                }
+            }
+        }).withName("TestDriveForward");
+    }
 
     public void stop() {
         currentXSpeed = 0.0;
@@ -533,52 +568,15 @@ public class DriveSubsystem extends SubsystemBase {
 
     @Override 
     public void periodic() {
-        try {
-            Pose2d pose = getPose();
-            field2d.setRobotPose(pose);
-            
-            SmartDashboard.putNumber("Drive/Pose X (m)", pose.getX());
-            SmartDashboard.putNumber("Drive/Pose Y (m)", pose.getY());
-            SmartDashboard.putNumber("Drive/Pose Rotation (deg)", pose.getRotation().getDegrees());
-            
-            if (isInitialized()) {
-                try {
-                    var heading = swerveDrive.getOdometryHeading();
-                    SmartDashboard.putNumber("Drive/Heading (deg)", heading.getDegrees());
-                    
-                    if (Math.abs(currentRotSpeed) < 0.01 && !isReadyToDrive()) {
-                        SmartDashboard.putBoolean("Drive/Gyro Drift Warning", 
-                            Math.abs(heading.getDegrees()) > 1.0);
-                    }
-                } catch (Exception e) {
-                    SmartDashboard.putNumber("Drive/Heading (deg)", pose.getRotation().getDegrees());
-                }
-            } else {
-                SmartDashboard.putNumber("Drive/Heading (deg)", pose.getRotation().getDegrees());
+        // Minimal periodic — YAGSL handles odometry updates in its own thread
+        // Only update field2d for visualization
+        if (isInitialized()) {
+            try {
+                Pose2d pose = swerveDrive.getPose();
+                field2d.setRobotPose(pose);
+            } catch (Exception e) {
+                // silently handle
             }
-            
-            SmartDashboard.putNumber("Drive/X Velocity (m/s)", currentXSpeed);
-            SmartDashboard.putNumber("Drive/Y Velocity (m/s)", currentYSpeed);
-            SmartDashboard.putNumber("Drive/Rotation Velocity (rad/s)", currentRotSpeed);
-            SmartDashboard.putNumber("Drive/Total Speed (m/s)", 
-                Math.sqrt(currentXSpeed * currentXSpeed + currentYSpeed * currentYSpeed));
-            
-            // Debug: Show if rotation is being commanded when it shouldn't be
-            if (Math.abs(currentRotSpeed) > 0.01 && Math.abs(currentXSpeed) < 0.1 && Math.abs(currentYSpeed) < 0.1) {
-                SmartDashboard.putBoolean("Drive/Unexpected Rotation", true);
-            } else {
-                SmartDashboard.putBoolean("Drive/Unexpected Rotation", false);
-            }
-            
-            updateModuleData();
-            
-            SmartDashboard.putBoolean("Drive/Initialized", isInitialized());
-            SmartDashboard.putBoolean("Drive/Modules Zeroed", hasZeroed);
-            SmartDashboard.putBoolean("Drive/Ready", isReadyToDrive());
-            SmartDashboard.putBoolean("Drive/Simulation", RobotBase.isSimulation());
-            
-        } catch (Exception e) {
-            logError("Periodic error: " + e.getMessage());
         }
     }
     
