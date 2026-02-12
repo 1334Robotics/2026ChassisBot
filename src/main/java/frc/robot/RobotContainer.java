@@ -30,7 +30,7 @@ import frc.robot.commands.auto.SimpleAuto;
 import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.LimelightVision;
 import com.pathplanner.lib.auto.AutoBuilder;
-
+@SuppressWarnings("unused")  // Many commands and constants are defined but not used yet as we build out functionality incrementally
 public class RobotContainer {
 
   public DriveSubsystem m_DriveSubsystem;  // Not final - may fail to initialize
