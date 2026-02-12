@@ -91,6 +91,17 @@ public class RobotContainer {
     // Alliance color selector
     SmartDashboard.putString("Alliance/Color", "Blue");
     
+    // Control mode indicator
+    SmartDashboard.putString("Controls/Mode", "Xbox Controller");
+    SmartDashboard.putData("Controls/Toggle to Keyboard", Commands.runOnce(() -> {
+      Input.setControlMode(true);
+      SmartDashboard.putString("Controls/Mode", "Keyboard (WASD+QE)");
+    }).withName("UseKeyboard"));
+    SmartDashboard.putData("Controls/Toggle to Xbox", Commands.runOnce(() -> {
+      Input.setControlMode(false);
+      SmartDashboard.putString("Controls/Mode", "Xbox Controller");
+    }).withName("UseXbox"));
+    
     // Field constants for debugging
     SmartDashboard.putNumber("Field/Length (m)", 17.54);
     SmartDashboard.putNumber("Field/Width (m)", 8.21);
@@ -101,19 +112,28 @@ public class RobotContainer {
   SmartDashboard.putNumber("Field/Hub Rest X", FieldConstants.HUB_REST_POSITION.getX());
   SmartDashboard.putNumber("Field/Hub Rest Y", FieldConstants.HUB_REST_POSITION.getY());
     
-    // Control instructions
-    SmartDashboard.putString("Controls/Left Stick", "Move Robot");
-    SmartDashboard.putString("Controls/Right Stick X", "Rotate Robot");
-    SmartDashboard.putString("Controls/Right Bumper (R1)", "Increase Speed (+10%)");
-    SmartDashboard.putString("Controls/Left Bumper (L1)", "Decrease Speed (-10%)");
-    SmartDashboard.putString("Controls/Right Trigger", "Full Speed Mode");
-    SmartDashboard.putString("Controls/Left Trigger", "Precision Mode");
-    SmartDashboard.putString("Controls/A Button", "Test Auto");
-    SmartDashboard.putString("Controls/B Button", "Reset to Blue Start");
-    SmartDashboard.putString("Controls/X Button", "Reset to Red Start");
-    SmartDashboard.putString("Controls/Y Button", "Reset to Center");
-    SmartDashboard.putString("Controls/POV Down", "Reset Heading");
-    SmartDashboard.putString("Controls/POV Up", "Zero Gyro & Sync Modules");
+    // Control instructions - Xbox Controller
+    SmartDashboard.putString("Xbox/Left Stick", "Move Robot");
+    SmartDashboard.putString("Xbox/Right Stick X", "Rotate Robot");
+    SmartDashboard.putString("Xbox/Right Bumper (R1)", "Increase Speed (+10%)");
+    SmartDashboard.putString("Xbox/Left Bumper (L1)", "Decrease Speed (-10%)");
+    SmartDashboard.putString("Xbox/Right Trigger", "Full Speed Mode");
+    SmartDashboard.putString("Xbox/Left Trigger", "Precision Mode");
+    SmartDashboard.putString("Xbox/A Button", "Test Auto");
+    SmartDashboard.putString("Xbox/B Button", "Reset to Blue Start");
+    SmartDashboard.putString("Xbox/X Button", "Reset to Red Start");
+    SmartDashboard.putString("Xbox/Y Button", "Reset to Center");
+    SmartDashboard.putString("Xbox/POV Down", "Reset Heading");
+    SmartDashboard.putString("Xbox/POV Up", "Zero Gyro & Sync Modules");
+    
+    // Keyboard instructions
+    SmartDashboard.putString("Keyboard/W", "Forward");
+    SmartDashboard.putString("Keyboard/S", "Backward");
+    SmartDashboard.putString("Keyboard/A", "Strafe Left");
+    SmartDashboard.putString("Keyboard/D", "Strafe Right");
+    SmartDashboard.putString("Keyboard/Q", "Rotate Left");
+    SmartDashboard.putString("Keyboard/E", "Rotate Right");
+    SmartDashboard.putString("Keyboard/Spacebar", "Toggle Control Mode");
 
     // Computer key (dashboard) to lock and rest near hub (only if DriveSubsystem available)
     if (m_DriveSubsystem != null) {
@@ -175,6 +195,13 @@ public class RobotContainer {
       DriverStation.reportWarning("DriveSubsystem not available - skipping drive button bindings", false);
       return;
     }
+    
+    // Toggle control mode - Back button on Xbox or keyboard button
+    driverXbox.back().onTrue(Commands.runOnce(() -> {
+      Input.toggleControlMode();
+      SmartDashboard.putString("Controls/Mode", Input.isKeyboardMode() ? "Keyboard (WASD+QE)" : "Xbox Controller");
+      SmartDashboard.putString("Status/Last Action", "Toggled to " + (Input.isKeyboardMode() ? "Keyboard" : "Xbox"));
+    }));
     
     // Speed control with bumpers
     driverXbox.rightBumper().onTrue(Commands.runOnce(() -> {

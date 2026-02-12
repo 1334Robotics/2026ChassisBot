@@ -192,7 +192,7 @@ public class Robot extends TimedRobot {
     
     // Auto-start the forward drive diagnostic
     if (robotInitialized && m_robotContainer != null && m_robotContainer.m_DriveSubsystem != null) {
-      m_robotContainer.m_DriveSubsystem.testDriveForwardCommand().schedule();
+      CommandScheduler.getInstance().schedule(m_robotContainer.m_DriveSubsystem.testDriveForwardCommand());
       System.out.println("[TEST] Auto-started testDriveForwardCommand");
     }
   }

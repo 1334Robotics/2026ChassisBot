@@ -20,7 +20,6 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
-import edu.wpi.first.wpilibj.DriverStation;
 @SuppressWarnings("unused")
 
 
@@ -248,7 +247,6 @@ public class DriveSubsystem extends SubsystemBase {
         double sign = Math.signum(value);
         return sign * ((absValue - ROTATION_DEADZONE) / (1.0 - ROTATION_DEADZONE));
     }
-    @SuppressWarnings("unused")
     private ChassisSpeeds limitSpeeds(ChassisSpeeds speeds) {
         double linearMagnitude = Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
         double angularMagnitude = Math.abs(speeds.omegaRadiansPerSecond);
@@ -342,10 +340,10 @@ public class DriveSubsystem extends SubsystemBase {
                     SmartDashboard.putNumber("Diag/" + names[i] + "/AngleError", 
                         desiredStates[i].angle.getDegrees() - actual.angle.getDegrees());
                     
-                    // Also log maple-sim direct state if available
+                    // Also log maple-sim direct state if available (via YAGSL sim wrapper)
                     var simMod = modules[i].getSimModule();
-                    if (simMod != null && simMod.mapleSimModule != null) {
-                        var simState = simMod.mapleSimModule.getMeasuredState();
+                    if (simMod != null) {
+                        var simState = simMod.getState();
                         SmartDashboard.putNumber("Diag/" + names[i] + "/SimAngle", simState.angle.getDegrees());
                         SmartDashboard.putNumber("Diag/" + names[i] + "/SimSpeed", simState.speedMetersPerSecond);
                     }
