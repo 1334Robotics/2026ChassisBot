@@ -17,6 +17,7 @@ import frc.robot.Constants.DriveConstants;
 import frc.robot.Constants.FieldConstants;
 import frc.robot.commands.Autos;
 import frc.robot.commands.auto.AutoAlgaeAuto;
+import frc.robot.commands.auto.AutoPathes;
 import frc.robot.commands.auto.AutoAvoidCollision;
 import frc.robot.commands.auto.AutoBalance;
 import frc.robot.commands.auto.AutoComplexPath;
@@ -92,15 +93,7 @@ public class RobotContainer {
     SmartDashboard.putString("Alliance/Color", "Blue");
     
     // Control mode indicator
-    SmartDashboard.putString("Controls/Mode", "Xbox Controller");
-    SmartDashboard.putData("Controls/Toggle to Keyboard", Commands.runOnce(() -> {
-      Input.setControlMode(true);
-      SmartDashboard.putString("Controls/Mode", "Keyboard (WASD+QE)");
-    }).withName("UseKeyboard"));
-    SmartDashboard.putData("Controls/Toggle to Xbox", Commands.runOnce(() -> {
-      Input.setControlMode(false);
-      SmartDashboard.putString("Controls/Mode", "Xbox Controller");
-    }).withName("UseXbox"));
+    SmartDashboard.putString("Controls/Mode", "Keyboard: Arrows+QE | Xbox: Sticks (both work)");
     
     // Field constants for debugging
     SmartDashboard.putNumber("Field/Length (m)", 17.54);
@@ -169,6 +162,7 @@ public class RobotContainer {
         autoChooser.addOption("Balance", new AutoBalance(m_DriveSubsystem));
         autoChooser.addOption("Pickup Cycles", new AutoPickupAuto(m_DriveSubsystem));
         autoChooser.addOption("Figure 8 Pattern", new AutoFigure8(m_DriveSubsystem));
+        autoChooser.addOption("Auto Pathes (PathPlanner)", new AutoPathes(m_DriveSubsystem));
       } else {
         DriverStation.reportWarning("DriveSubsystem not initialized - limited autonomous options available", false);
       }
@@ -181,9 +175,9 @@ public class RobotContainer {
     if (m_DriveSubsystem != null) {
       m_DriveSubsystem.setDefaultCommand(
         m_DriveSubsystem.driveCommand(
-          () -> -driverXbox.getLeftY(),
-          () -> -driverXbox.getLeftX(),
-          () -> -driverXbox.getRightX() * DriveConstants.ROTATION_SCALE
+          () -> -Input.getTranslationY(),
+          () -> -Input.getTranslationX(),
+          () -> -Input.getRotation() * DriveConstants.ROTATION_SCALE
         ).withName("DefaultDrive")
       );
     }
@@ -196,11 +190,9 @@ public class RobotContainer {
       return;
     }
     
-    // Toggle control mode - Back button on Xbox or keyboard button
+    // Back button - reserved for future use
     driverXbox.back().onTrue(Commands.runOnce(() -> {
-      Input.toggleControlMode();
-      SmartDashboard.putString("Controls/Mode", Input.isKeyboardMode() ? "Keyboard (WASD+QE)" : "Xbox Controller");
-      SmartDashboard.putString("Status/Last Action", "Toggled to " + (Input.isKeyboardMode() ? "Keyboard" : "Xbox"));
+      SmartDashboard.putString("Status/Last Action", "Back button pressed");
     }));
     
     // Speed control with bumpers

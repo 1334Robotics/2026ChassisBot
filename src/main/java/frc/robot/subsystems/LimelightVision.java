@@ -59,8 +59,7 @@ public class LimelightVision extends SubsystemBase {
     /**
      * Create a LimelightVision with a custom NetworkTable name.
      * @param tableName The name of the Limelight's NetworkTable (e.g., "limelight", "limelight-front")
-     */
-    public LimelightVision(String tableName) {
+     */    public LimelightVision(String tableName) {
         limelightTable = NetworkTableInstance.getDefault().getTable(tableName);
         
         // Get entries with null safety
