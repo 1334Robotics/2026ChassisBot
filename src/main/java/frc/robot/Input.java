@@ -7,111 +7,83 @@ import edu.wpi.first.wpilibj.GenericHID;
 public class Input {
     public static final XboxController driveController = new XboxController(0);
     
-    // Keyboard control - port 2 (WPILib simulator keyboard shows up as a joystick)
-    private static final GenericHID keyboard = new GenericHID(2);
+    // Keyboard0 on robot port 0: WASD = axes 0,1 (translation)
+    // Keyboard2 on robot port 2: Arrow keys = axes 0,1 (translation), Q/F = axis 2 (rotation)
+    private static final GenericHID kb0 = new GenericHID(0);  // Keyboard0 = WASD
+    private static final GenericHID kb2 = new GenericHID(2);  // Keyboard2 = Arrows + Q/F
     
-    // Toggle between controller and keyboard
-    private static boolean useKeyboard = false;
-    
-    /**
-     * Switch control mode between Xbox controller and keyboard
-     */
-    public static void toggleControlMode() {
-        useKeyboard = !useKeyboard;
-        System.out.println("Control mode: " + (useKeyboard ? "KEYBOARD" : "XBOX CONTROLLER"));
-    }
+    // Deadband
+    private static final double DEADBAND = 0.05;
     
     /**
-     * Set control mode explicitly
-     * @param keyboard true for keyboard, false for Xbox controller
+     * Translation X (strafe):
+     *   Keyboard0 axis 0 (A/D keys) OR Keyboard2 axis 0 (Left/Right arrows)
+     *   Uses whichever has larger absolute value.
      */
-    public static void setControlMode(boolean keyboard) {
-        useKeyboard = keyboard;
-        System.out.println("Control mode set to: " + (useKeyboard ? "KEYBOARD" : "XBOX CONTROLLER"));
-    }
-    
-    /**
-     * Check if keyboard mode is active
-     */
-    public static boolean isKeyboardMode() {
-        return useKeyboard;
-    }
-    
     public static double getTranslationX() {
-        if (useKeyboard) {
-            return getKeyboardTranslationX();
+        double wasd = kb0.getRawAxis(0);
+        double arrows = kb2.getRawAxis(0);
+        
+        if (Math.abs(wasd) < DEADBAND) wasd = 0;
+        if (Math.abs(arrows) < DEADBAND) arrows = 0;
+        
+        return (Math.abs(arrows) > Math.abs(wasd)) ? arrows : wasd;
+    }
+
+    /**
+     * Translation Y (forward/back):
+     *   Keyboard0 axis 1 (W/S keys) OR Keyboard2 axis 1 (Up/Down arrows)
+     *   Uses whichever has larger absolute value.
+     */
+    public static double getTranslationY() {
+        double wasd = kb0.getRawAxis(1);
+        double arrows = kb2.getRawAxis(1);
+        
+        if (Math.abs(wasd) < DEADBAND) wasd = 0;
+        if (Math.abs(arrows) < DEADBAND) arrows = 0;
+        
+        return (Math.abs(arrows) > Math.abs(wasd)) ? arrows : wasd;
+    }
+
+    /**
+     * Rotation:
+     *   Keyboard2 button 5 (Q = rotate left), button 6 (F = rotate right)
+     *   These are momentary buttons - only active while held down.
+     *   Also checks Xbox right stick (kb0 axis 4) if a real controller is connected.
+     */
+    public static double getRotation() {
+        // Xbox right stick (if real controller plugged in)
+        double xboxRot = kb0.getRawAxis(4);
+        if (Math.abs(xboxRot) < DEADBAND) xboxRot = 0;
+        
+        // Keyboard rotation via buttons (momentary, no latching)
+        double keyRot = 0;
+        if (kb2.getRawButton(5)) {  // Q key - rotate left
+            keyRot -= 1.0;
         }
-        return driveController.getLeftX();
+        if (kb2.getRawButton(6)) {  // F key - rotate right
+            keyRot += 1.0;
+        }
+        
+        return (Math.abs(keyRot) > Math.abs(xboxRot)) ? keyRot : xboxRot;
     }
 
     public static void testInput() {
-        // Example usage of getTranslationX and getTranslationY to remove the unused method warning
-        double translationX = getTranslationX();
-        double translationY = getTranslationY();
-        System.out.println("Translation X: " + translationX);
-        System.out.println("Translation Y: " + translationY);
-    }
-    
-    // getting the information neccessary for driving the robot
-    public static double getTranslationY() {
-        if (useKeyboard) {
-            return getKeyboardTranslationY();
-        }
-        double value = driveController.getLeftY();
-        return value;
-    }
-
-    public static double getRotation() {
-        if (useKeyboard) {
-            return getKeyboardRotation();
-        }
-        return driveController.getRightX();
-    }
-    
-    // Keyboard controls mapping
-    // WASD for translation, Q/E for rotation
-    private static double getKeyboardTranslationX() {
-        double x = 0;
-        if (keyboard.getRawButton(1)) { // A - strafe left
-            x -= 0.5;
-        }
-        if (keyboard.getRawButton(4)) { // D - strafe right
-            x += 0.5;
-        }
-        return x;
-    }
-    
-    private static double getKeyboardTranslationY() {
-        double y = 0;
-        if (keyboard.getRawButton(3)) { // W - forward
-            y += 0.5;
-        }
-        if (keyboard.getRawButton(2)) { // S - backward
-            y -= 0.5;
-        }
-        return y;
-    }
-    
-    private static double getKeyboardRotation() {
-        double rotation = 0;
-        if (keyboard.getRawButton(5)) { // Q - rotate left
-            rotation -= 0.4;
-        }
-        if (keyboard.getRawButton(6)) { // E - rotate right
-            rotation += 0.4;
-        }
-        return rotation;
+        System.out.printf("X: %.2f  Y: %.2f  Rot: %.2f  (kb0: %.2f/%.2f  kb2: %.2f/%.2f/%.2f)%n",
+            getTranslationX(), getTranslationY(), getRotation(),
+            kb0.getRawAxis(0), kb0.getRawAxis(1),
+            kb2.getRawAxis(0), kb2.getRawAxis(1), kb2.getRawAxis(2));
     }
     
     /**
      * Get the keyboard HID for button binding
      */
     public static GenericHID getKeyboard() {
-        return keyboard;
+        return kb2;
     }
     
     /**
-     * Create a CommandGenericHID wrapper for the keyboard
+     * Create a CommandGenericHID wrapper for Keyboard2
      */
     public static CommandGenericHID getCommandKeyboard() {
         return new CommandGenericHID(2);
