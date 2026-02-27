@@ -20,6 +20,12 @@ public final class Constants {
         public static final double PRECISION_MULTIPLIER = 0.3;
         public static final double PRECISION_ROTATION_SCALE = 0.3;
         
+        // Speed multiplier bounds for bumper-based speed control
+        public static final double MIN_SPEED_MULTIPLIER = 0.2;
+        public static final double MAX_SPEED_MULTIPLIER = 1.0;
+        public static final double SPEED_MULTIPLIER_STEP = 0.1;
+        public static final double DEFAULT_SPEED_MULTIPLIER = 0.7;
+        
         // Auto constants
         public static final double AUTO_MAX_SPEED_MPS = 4.0;
         public static final double AUTO_POSITION_TOLERANCE_M = 0.20;
