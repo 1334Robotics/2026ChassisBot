@@ -1,0 +1,1 @@
+{"location":{"front":-11.125,"left":-11.125},"absoluteEncoderOffset":0,"drive":{"type":"talonfx","id":33,"canbus":null},"angle":{"type":"talonfx","id":32,"canbus":null},"encoder":{"type":"cancoder","id":31,"canbus":null},"inverted":{"drive":false,"angle":false}}

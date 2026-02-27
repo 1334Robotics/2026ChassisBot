@@ -19,7 +19,7 @@ public final class Main {
    *
    * <p>If you change your main robot class, change the parameter type.
    */
-  public static void main(String... args) {
-    RobotBase.startRobot(Robot::new);
+  public static void main(String[] args) {
+    RobotBase.startRobot(() -> new Robot());
   }
 }
