@@ -9,11 +9,13 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.DriveConstants;
+import frc.robot.Constants.FieldConstants;
 import swervelib.SwerveDrive;
 import swervelib.parser.SwerveParser;
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -40,7 +42,10 @@ public class DriveSubsystem extends SubsystemBase {
     private static final double DEADZONE_THRESHOLD = 0.05;
     private static final double ROTATION_DEADZONE = 0.05;
     private static final double MAX_SPEED_LIMIT = 5.0;
-    
+
+    // Adjustable speed multiplier (changed via bumpers)
+    private double speedMultiplier = DriveConstants.DEFAULT_SPEED_MULTIPLIER;
+
     public DriveSubsystem(File directory) {
         field2d = new Field2d();
         SmartDashboard.putData("Field", field2d);
@@ -132,7 +137,7 @@ public class DriveSubsystem extends SubsystemBase {
                 this::getPose,                    // Pose supplier
                 this::resetOdometry,              // Pose reset consumer
                 this::getRobotRelativeSpeeds,     // ChassisSpeeds supplier (robot-relative)
-                (speeds, feedforwards) -> driveFieldOriented(speeds), // Drive consumer
+                (speeds, feedforwards) -> driveRobotRelative(speeds), // Drive consumer (robot-relative!)
                 new PPHolonomicDriveController(
                     new PIDConstants(5.0, 0.0, 0.0),   // Translation PID
                     new PIDConstants(5.0, 0.0, 0.0)    // Rotation PID
@@ -247,6 +252,19 @@ public class DriveSubsystem extends SubsystemBase {
         double sign = Math.signum(value);
         return sign * ((absValue - ROTATION_DEADZONE) / (1.0 - ROTATION_DEADZONE));
     }
+
+    /**
+     * Clamp a velocity component so the robot cannot drive outside the field.
+     * When the robot is near or beyond a boundary, velocity pushing further out is zeroed.
+     * The margin constant controls how close to the wall the brake engages.
+     */
+    private double clampFieldVelocity(double velocity, double position, double minBound, double maxBound) {
+        final double MARGIN = FieldConstants.FIELD_MARGIN; // 0.5 m from wall
+        if (position <= minBound + MARGIN && velocity < 0) return 0.0;
+        if (position >= maxBound - MARGIN && velocity > 0) return 0.0;
+        return velocity;
+    }
+
     private ChassisSpeeds limitSpeeds(ChassisSpeeds speeds) {
         double linearMagnitude = Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
         double angularMagnitude = Math.abs(speeds.omegaRadiansPerSecond);
@@ -269,7 +287,6 @@ public class DriveSubsystem extends SubsystemBase {
     
     public Command driveCommand(DoubleSupplier translationX, DoubleSupplier translationY, 
                                 DoubleSupplier rotationX) {
-        // Matches YAGSL official example: driveCommand(DoubleSupplier, DoubleSupplier, DoubleSupplier)
         return run(() -> {
             if (!isInitialized()) {
                 return;
@@ -285,12 +302,18 @@ public class DriveSubsystem extends SubsystemBase {
                 yInput = applyDeadzone(yInput);
                 rotInput = applyRotationDeadzone(rotInput);
                 
-                // Scale to velocity (m/s and rad/s)
-                currentXSpeed = xInput * swerveDrive.getMaximumChassisVelocity();
-                currentYSpeed = yInput * swerveDrive.getMaximumChassisVelocity();
-                currentRotSpeed = Math.pow(rotInput, 3) * swerveDrive.getMaximumChassisAngularVelocity();
+                // Scale to velocity (m/s and rad/s), applying speed multiplier
+                currentXSpeed = xInput * swerveDrive.getMaximumChassisVelocity() * speedMultiplier;
+                currentYSpeed = yInput * swerveDrive.getMaximumChassisVelocity() * speedMultiplier;
+                currentRotSpeed = Math.pow(rotInput, 3) * swerveDrive.getMaximumChassisAngularVelocity() * speedMultiplier;
                 
-                // Drive using YAGSL — field-relative, closed-loop (matching YAGSL example)
+                // Field boundary protection — prevent driving off the field
+                // Velocities here are field-relative (X = downfield, Y = cross-field)
+                Pose2d pose = swerveDrive.getPose();
+                currentXSpeed = clampFieldVelocity(currentXSpeed, pose.getX(), 0, FieldConstants.FIELD_LENGTH);
+                currentYSpeed = clampFieldVelocity(currentYSpeed, pose.getY(), 0, FieldConstants.FIELD_WIDTH);
+
+                // Drive using YAGSL — field-relative, closed-loop
                 swerveDrive.drive(
                     new Translation2d(currentXSpeed, currentYSpeed),
                     currentRotSpeed,
@@ -430,6 +453,28 @@ public class DriveSubsystem extends SubsystemBase {
         }
     }
 
+    /**
+     * Drive using robot-relative chassis speeds.
+     * Used by PathPlanner's AutoBuilder — PathPlanner outputs robot-relative speeds.
+     */
+    public void driveRobotRelative(ChassisSpeeds velocity) {
+        if (velocity == null) {
+            velocity = new ChassisSpeeds(0, 0, 0);
+        }
+        
+        currentXSpeed = velocity.vxMetersPerSecond;
+        currentYSpeed = velocity.vyMetersPerSecond;
+        currentRotSpeed = velocity.omegaRadiansPerSecond;
+        
+        if (isInitialized()) {
+            try {
+                swerveDrive.drive(velocity);
+            } catch (Exception e) {
+                logError("driveRobotRelative error: " + e.getMessage());
+            }
+        }
+    }
+
     public Pose2d getPose() {
         // Always use YAGSL's pose — it tracks sim state internally
         if (isInitialized()) {
@@ -477,6 +522,27 @@ public class DriveSubsystem extends SubsystemBase {
 
     public double getMaxSpeed() {
         return DriveConstants.MAX_SPEED_MPS;
+    }
+
+    /** Increase the teleop speed multiplier by one step. */
+    public void increaseSpeed() {
+        speedMultiplier = Math.min(DriveConstants.MAX_SPEED_MULTIPLIER,
+                                   speedMultiplier + DriveConstants.SPEED_MULTIPLIER_STEP);
+        SmartDashboard.putNumber("Drive/Speed Multiplier", speedMultiplier);
+        logDebug("Speed multiplier: " + String.format("%.0f%%", speedMultiplier * 100));
+    }
+
+    /** Decrease the teleop speed multiplier by one step. */
+    public void decreaseSpeed() {
+        speedMultiplier = Math.max(DriveConstants.MIN_SPEED_MULTIPLIER,
+                                   speedMultiplier - DriveConstants.SPEED_MULTIPLIER_STEP);
+        SmartDashboard.putNumber("Drive/Speed Multiplier", speedMultiplier);
+        logDebug("Speed multiplier: " + String.format("%.0f%%", speedMultiplier * 100));
+    }
+
+    /** Get the current speed multiplier (0.0–1.0). */
+    public double getSpeedMultiplier() {
+        return speedMultiplier;
     }
 
     public void printEncoderOffsets() {
@@ -566,12 +632,26 @@ public class DriveSubsystem extends SubsystemBase {
 
     @Override 
     public void periodic() {
-        // Minimal periodic — YAGSL handles odometry updates in its own thread
-        // Only update field2d for visualization
         if (isInitialized()) {
             try {
                 Pose2d pose = swerveDrive.getPose();
                 field2d.setRobotPose(pose);
+
+                // Essential telemetry — always available on dashboard
+                SmartDashboard.putNumber("Drive/X (m)", Math.round(pose.getX() * 100.0) / 100.0);
+                SmartDashboard.putNumber("Drive/Y (m)", Math.round(pose.getY() * 100.0) / 100.0);
+                SmartDashboard.putNumber("Drive/Heading (deg)",
+                    Math.round(pose.getRotation().getDegrees() * 10.0) / 10.0);
+                SmartDashboard.putNumber("Drive/Speed Multiplier", speedMultiplier);
+
+                // Battery voltage — critical for knowing when to swap
+                double voltage = RobotController.getBatteryVoltage();
+                SmartDashboard.putNumber("Robot/Battery (V)", Math.round(voltage * 100.0) / 100.0);
+                if (voltage < 11.5) {
+                    SmartDashboard.putString("Robot/Battery Warning", "LOW BATTERY!");
+                } else {
+                    SmartDashboard.putString("Robot/Battery Warning", "OK");
+                }
             } catch (Exception e) {
                 // silently handle
             }

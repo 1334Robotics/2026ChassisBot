@@ -1,90 +1,72 @@
 package frc.robot;
 
-import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.button.CommandGenericHID;
 import edu.wpi.first.wpilibj.GenericHID;
 
 public class Input {
-    public static final XboxController driveController = new XboxController(0);
-    
-    // Keyboard0 on robot port 0: WASD = axes 0,1 (translation)
-    // Keyboard2 on robot port 2: Arrow keys = axes 0,1 (translation), Q/F = axis 2 (rotation)
-    private static final GenericHID kb0 = new GenericHID(0);  // Keyboard0 = WASD
-    private static final GenericHID kb2 = new GenericHID(2);  // Keyboard2 = Arrows + Q/F
-    
-    // Deadband
-    private static final double DEADBAND = 0.05;
-    
+    // Keyboard0 on robot port 0: WASD keys + E/R rotation
+    //   axis 0 = A (dec) / D (inc)  — strafe left/right
+    //   axis 1 = W (dec) / S (inc)  — forward/back
+    //   axis 2 = E (dec) / R (inc)  — rotation (slow ramp, keyRate 0.01)
+    // Keyboard2 on robot port 2: Arrow keys + Q/F buttons
+    //   axis 0 = Left (dec) / Right (inc) — strafe left/right
+    //   axis 1 = Up (dec) / Down (inc)    — forward/back
+    //   button 5 = Q (rotate left), button 6 = F (rotate right)
+    private static final GenericHID kb0 = new GenericHID(0);
+    private static final GenericHID kb2 = new GenericHID(2);
+
     /**
-     * Translation X (strafe):
-     *   Keyboard0 axis 0 (A/D keys) OR Keyboard2 axis 0 (Left/Right arrows)
-     *   Uses whichever has larger absolute value.
+     * Translation X (strafe left/right).
+     * Returns the larger-magnitude value between WASD (A/D) and arrow keys.
      */
     public static double getTranslationX() {
-        double wasd = kb0.getRawAxis(0);
+        double wasd   = kb0.getRawAxis(0);
         double arrows = kb2.getRawAxis(0);
-        
-        if (Math.abs(wasd) < DEADBAND) wasd = 0;
-        if (Math.abs(arrows) < DEADBAND) arrows = 0;
-        
         return (Math.abs(arrows) > Math.abs(wasd)) ? arrows : wasd;
     }
 
     /**
-     * Translation Y (forward/back):
-     *   Keyboard0 axis 1 (W/S keys) OR Keyboard2 axis 1 (Up/Down arrows)
-     *   Uses whichever has larger absolute value.
+     * Translation Y (forward/back).
+     * Returns the larger-magnitude value between WASD (W/S) and arrow keys.
      */
     public static double getTranslationY() {
-        double wasd = kb0.getRawAxis(1);
+        double wasd   = kb0.getRawAxis(1);
         double arrows = kb2.getRawAxis(1);
-        
-        if (Math.abs(wasd) < DEADBAND) wasd = 0;
-        if (Math.abs(arrows) < DEADBAND) arrows = 0;
-        
         return (Math.abs(arrows) > Math.abs(wasd)) ? arrows : wasd;
     }
 
     /**
-     * Rotation:
-     *   Keyboard2 button 5 (Q = rotate left), button 6 (F = rotate right)
-     *   These are momentary buttons - only active while held down.
-     *   Also checks Xbox right stick (kb0 axis 4) if a real controller is connected.
+     * Rotation.
+     * Sources (picks whichever has the largest magnitude):
+     * - Keyboard0 axis 2: E (dec = left) / R (inc = right) — smooth ramp via keyRate
+     * - Keyboard2 button 5 (Q) = rotate left (-1.0), button 6 (F) = rotate right (+1.0)
      */
     public static double getRotation() {
-        // Xbox right stick (if real controller plugged in)
-        double xboxRot = kb0.getRawAxis(4);
-        if (Math.abs(xboxRot) < DEADBAND) xboxRot = 0;
-        
-        // Keyboard rotation via buttons (momentary, no latching)
-        double keyRot = 0;
-        if (kb2.getRawButton(5)) {  // Q key - rotate left
-            keyRot -= 1.0;
-        }
-        if (kb2.getRawButton(6)) {  // F key - rotate right
-            keyRot += 1.0;
-        }
-        
-        return (Math.abs(keyRot) > Math.abs(xboxRot)) ? keyRot : xboxRot;
+        // E/R keys on Keyboard0 (axis 2) — smooth ramp rotation
+        double erRot = kb0.getRawAxis(2);
+
+        // Q/F keys on Keyboard2 (buttons) — instant full rotation
+        double qfRot = 0;
+        if (kb2.getRawButton(5)) qfRot -= 1.0;  // Q = rotate left (CCW)
+        if (kb2.getRawButton(6)) qfRot += 1.0;  // F = rotate right (CW)
+
+        return (Math.abs(qfRot) > Math.abs(erRot)) ? qfRot : erRot;
     }
 
     public static void testInput() {
-        System.out.printf("X: %.2f  Y: %.2f  Rot: %.2f  (kb0: %.2f/%.2f  kb2: %.2f/%.2f/%.2f)%n",
+        System.out.printf("X: %.2f  Y: %.2f  Rot: %.2f  (kb0: %.2f/%.2f/%.2f  kb2: %.2f/%.2f  Q:%b F:%b)%n",
             getTranslationX(), getTranslationY(), getRotation(),
-            kb0.getRawAxis(0), kb0.getRawAxis(1),
-            kb2.getRawAxis(0), kb2.getRawAxis(1), kb2.getRawAxis(2));
+            kb0.getRawAxis(0), kb0.getRawAxis(1), kb0.getRawAxis(2),
+            kb2.getRawAxis(0), kb2.getRawAxis(1),
+            kb2.getRawButton(5), kb2.getRawButton(6));
     }
-    
-    /**
-     * Get the keyboard HID for button binding
-     */
+
+    /** Get the Keyboard2 HID for button binding */
     public static GenericHID getKeyboard() {
         return kb2;
     }
-    
-    /**
-     * Create a CommandGenericHID wrapper for Keyboard2
-     */
+
+    /** Create a CommandGenericHID wrapper for Keyboard2 */
     public static CommandGenericHID getCommandKeyboard() {
         return new CommandGenericHID(2);
     }

@@ -3,6 +3,7 @@ package frc.robot;
 import java.io.File;
 import java.util.Set;
 
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -50,11 +51,12 @@ public class RobotContainer {
       m_DriveSubsystem = new DriveSubsystem(new File(Filesystem.getDeployDirectory(), "SWERVE"));
       System.out.println("[RobotContainer] DriveSubsystem initialized successfully");
       
-      // Set initial robot position - START AT BLUE ALLIANCE
-      m_DriveSubsystem.resetOdometry(FieldConstants.BLUE_ALLIANCE_START);
-      System.out.println("[RobotContainer] Robot initialized at Blue Alliance start: (" + 
-          String.format("%.2f, %.2f", FieldConstants.BLUE_ALLIANCE_START.getX(), 
-          FieldConstants.BLUE_ALLIANCE_START.getY()) + ")");
+      // Set initial robot position based on alliance reported by Driver Station
+      Pose2d startPose = getAllianceStartPose();
+      m_DriveSubsystem.resetOdometry(startPose);
+      System.out.println("[RobotContainer] Robot initialized at " +
+          (isRedAlliance() ? "Red" : "Blue") + " Alliance start: (" +
+          String.format("%.2f, %.2f", startPose.getX(), startPose.getY()) + ")");
     } catch (Exception e) {
       DriverStation.reportError("DriveSubsystem initialization failed: " + e.getMessage(), e.getStackTrace());
       System.err.println("[RobotContainer] CRITICAL: DriveSubsystem failed to initialize - robot will run in limited mode");
@@ -124,9 +126,11 @@ public class RobotContainer {
     SmartDashboard.putString("Keyboard/S", "Backward");
     SmartDashboard.putString("Keyboard/A", "Strafe Left");
     SmartDashboard.putString("Keyboard/D", "Strafe Right");
-    SmartDashboard.putString("Keyboard/Q", "Rotate Left");
-    SmartDashboard.putString("Keyboard/E", "Rotate Right");
-    SmartDashboard.putString("Keyboard/Spacebar", "Toggle Control Mode");
+    SmartDashboard.putString("Keyboard/Q", "Rotate Left (instant)");
+    SmartDashboard.putString("Keyboard/F", "Rotate Right (instant)");
+    SmartDashboard.putString("Keyboard/E", "Rotate Left (smooth)");
+    SmartDashboard.putString("Keyboard/R", "Rotate Right (smooth)");
+    SmartDashboard.putString("Keyboard/Arrows", "Alternative WASD");
 
     // Computer key (dashboard) to lock and rest near hub (only if DriveSubsystem available)
     if (m_DriveSubsystem != null) {
@@ -145,24 +149,38 @@ public class RobotContainer {
       autoChooser = AutoBuilder.buildAutoChooser();
       System.out.println("[RobotContainer] PathPlanner AutoBuilder chooser configured");
     } else {
-      // Fallback: manual auto chooser
+      // Fallback: manual auto chooser using deferred commands (so they can be re-run)
       autoChooser = new SendableChooser<>();
       autoChooser.setDefaultOption("Do Nothing", Autos.doNothingAuto());
       
       if (m_DriveSubsystem != null) {
-        autoChooser.addOption("Drive Forward", Autos.driveForwardAuto(m_DriveSubsystem));
-        autoChooser.addOption("Simple (Reef)", new SimpleAuto(m_DriveSubsystem));
-        autoChooser.addOption("Safe Score (1 piece)", new AutoSafeScore(m_DriveSubsystem));
-        autoChooser.addOption("Sequential (2 pieces)", new SequentialAuto(m_DriveSubsystem));
-        autoChooser.addOption("Triple Score (3 pieces)", new AutoTripleScore(m_DriveSubsystem));
-        autoChooser.addOption("Avoid Collision", new AutoAvoidCollision(m_DriveSubsystem));
-        autoChooser.addOption("Algae Removal", new AutoAlgaeAuto(m_DriveSubsystem));
-        autoChooser.addOption("Processor Scoring", new AutoProcessorAuto(m_DriveSubsystem));
-        autoChooser.addOption("Complex Path", new AutoComplexPath(m_DriveSubsystem));
-        autoChooser.addOption("Balance", new AutoBalance(m_DriveSubsystem));
-        autoChooser.addOption("Pickup Cycles", new AutoPickupAuto(m_DriveSubsystem));
-        autoChooser.addOption("Figure 8 Pattern", new AutoFigure8(m_DriveSubsystem));
-        autoChooser.addOption("Auto Pathes (PathPlanner)", new AutoPathes(m_DriveSubsystem));
+        Set<edu.wpi.first.wpilibj2.command.Subsystem> driveReqs = Set.of(m_DriveSubsystem);
+        autoChooser.addOption("Drive Forward",
+            Commands.defer(() -> Autos.driveForwardAuto(m_DriveSubsystem), driveReqs));
+        autoChooser.addOption("Simple (Reef)",
+            Commands.defer(() -> new SimpleAuto(m_DriveSubsystem), driveReqs));
+        autoChooser.addOption("Safe Score (1 piece)",
+            Commands.defer(() -> new AutoSafeScore(m_DriveSubsystem), driveReqs));
+        autoChooser.addOption("Sequential (2 pieces)",
+            Commands.defer(() -> new SequentialAuto(m_DriveSubsystem), driveReqs));
+        autoChooser.addOption("Triple Score (3 pieces)",
+            Commands.defer(() -> new AutoTripleScore(m_DriveSubsystem), driveReqs));
+        autoChooser.addOption("Avoid Collision",
+            Commands.defer(() -> new AutoAvoidCollision(m_DriveSubsystem), driveReqs));
+        autoChooser.addOption("Algae Removal",
+            Commands.defer(() -> new AutoAlgaeAuto(m_DriveSubsystem), driveReqs));
+        autoChooser.addOption("Processor Scoring",
+            Commands.defer(() -> new AutoProcessorAuto(m_DriveSubsystem), driveReqs));
+        autoChooser.addOption("Complex Path",
+            Commands.defer(() -> new AutoComplexPath(m_DriveSubsystem), driveReqs));
+        autoChooser.addOption("Balance",
+            Commands.defer(() -> new AutoBalance(m_DriveSubsystem), driveReqs));
+        autoChooser.addOption("Pickup Cycles",
+            Commands.defer(() -> new AutoPickupAuto(m_DriveSubsystem), driveReqs));
+        autoChooser.addOption("Figure 8 Pattern",
+            Commands.defer(() -> new AutoFigure8(m_DriveSubsystem), driveReqs));
+        autoChooser.addOption("Auto Pathes (PathPlanner)",
+            Commands.defer(() -> new AutoPathes(m_DriveSubsystem), driveReqs));
       } else {
         DriverStation.reportWarning("DriveSubsystem not initialized - limited autonomous options available", false);
       }
@@ -175,9 +193,27 @@ public class RobotContainer {
     if (m_DriveSubsystem != null) {
       m_DriveSubsystem.setDefaultCommand(
         m_DriveSubsystem.driveCommand(
-          () -> -Input.getTranslationY(),
-          () -> -Input.getTranslationX(),
-          () -> -Input.getRotation() * DriveConstants.ROTATION_SCALE
+          // Forward/back: W/S keys (sim) or Xbox left stick Y (real robot) — pick larger magnitude
+          () -> {
+            double kb = -Input.getTranslationY();
+            double xbox = -driverXbox.getLeftY();
+            return (Math.abs(kb) > Math.abs(xbox)) ? kb : xbox;
+          },
+          // Strafe: A/D keys (sim) or Xbox left stick X (real robot)
+          () -> {
+            double kb = -Input.getTranslationX();
+            double xbox = -driverXbox.getLeftX();
+            return (Math.abs(kb) > Math.abs(xbox)) ? kb : xbox;
+          },
+          // Rotation: E/R axis + Q/F buttons (sim) or Xbox right stick X (real robot)
+          // Keyboard gives 0 or ±1 (buttons) or slow ramp (axis), so don't pre-scale here.
+          // DriveSubsystem.driveCommand applies cube scaling internally, which is enough.
+          // Only apply ROTATION_SCALE to Xbox stick (which is analog and needs dampening).
+          () -> {
+            double kb = -Input.getRotation();
+            double xbox = -driverXbox.getRightX() * DriveConstants.ROTATION_SCALE;
+            return (Math.abs(kb) > Math.abs(xbox)) ? kb : xbox;
+          }
         ).withName("DefaultDrive")
       );
     }
@@ -190,17 +226,25 @@ public class RobotContainer {
       return;
     }
     
-    // Back button - reserved for future use
+    // Back button - EMERGENCY STOP: instantly stop all motors and lock wheels
     driverXbox.back().onTrue(Commands.runOnce(() -> {
-      SmartDashboard.putString("Status/Last Action", "Back button pressed");
-    }));
+      CommandScheduler.getInstance().cancelAll();
+      m_DriveSubsystem.stop();
+      m_DriveSubsystem.lock();
+      SmartDashboard.putString("Status/Last Action", "EMERGENCY STOP");
+      System.out.println("[RobotContainer] EMERGENCY STOP triggered");
+    }, m_DriveSubsystem));
     
-    // Speed control with bumpers
+    // Speed control with bumpers — persistently adjusts drive speed
     driverXbox.rightBumper().onTrue(Commands.runOnce(() -> {
-      SmartDashboard.putString("Status/Last Action", "Speed increased");
+      m_DriveSubsystem.increaseSpeed();
+      SmartDashboard.putString("Status/Last Action",
+          "Speed: " + String.format("%.0f%%", m_DriveSubsystem.getSpeedMultiplier() * 100));
     }));
     driverXbox.leftBumper().onTrue(Commands.runOnce(() -> {
-      SmartDashboard.putString("Status/Last Action", "Speed decreased");
+      m_DriveSubsystem.decreaseSpeed();
+      SmartDashboard.putString("Status/Last Action",
+          "Speed: " + String.format("%.0f%%", m_DriveSubsystem.getSpeedMultiplier() * 100));
     }));
 
     // Heading reset (POV Down)
@@ -316,6 +360,21 @@ public class RobotContainer {
   }
 
   /**
+   * Returns true if the Driver Station reports Red alliance (or defaults to false/Blue if unknown).
+   */
+  private boolean isRedAlliance() {
+    var alliance = DriverStation.getAlliance();
+    return alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red;
+  }
+
+  /**
+   * Returns the correct starting pose based on the current alliance color.
+   */
+  private Pose2d getAllianceStartPose() {
+    return isRedAlliance() ? FieldConstants.RED_ALLIANCE_START : FieldConstants.BLUE_ALLIANCE_START;
+  }
+
+  /**
    * Called when teleop starts.
    */
   public void teleopInit() {
@@ -324,8 +383,10 @@ public class RobotContainer {
       return;
     }
     
-    // Reset to Blue Alliance start at teleop begin
-    m_DriveSubsystem.resetOdometry(FieldConstants.BLUE_ALLIANCE_START);
-    System.out.println("Teleop initialized - odometry reset to Blue Alliance start");
+    // Reset odometry to the correct alliance start position
+    Pose2d startPose = getAllianceStartPose();
+    m_DriveSubsystem.resetOdometry(startPose);
+    System.out.println("Teleop initialized - odometry reset to " +
+        (isRedAlliance() ? "Red" : "Blue") + " Alliance start");
   }  
 }

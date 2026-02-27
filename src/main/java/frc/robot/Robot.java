@@ -92,9 +92,6 @@ public class Robot extends TimedRobot {
     }
 
     try {
-      // Small delay to ensure systems are ready
-      Thread.sleep(100);
-      
       // Log position BEFORE getting autonomous command (only if DriveSubsystem available)
       if (m_robotContainer.m_DriveSubsystem != null) {
         Pose2d prePose = m_robotContainer.m_DriveSubsystem.getPose();
