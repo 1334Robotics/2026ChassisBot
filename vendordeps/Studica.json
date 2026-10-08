@@ -1,0 +1,71 @@
+{
+  "fileName": "Studica.json",
+  "name": "Studica",
+  "version": "2025.0.0",
+  "uuid": "cb311d09-36e9-4143-a032-55bb2b94443b",
+  "frcYear": "2026",
+  "mavenUrls": [
+    "https://dev.studica.com/maven/release/2025/"
+  ],
+  "jsonUrl": "https://dev.studica.com/releases/2025/Studica-2025.0.0.json",
+  "javaDependencies": [
+    {
+      "groupId": "com.studica.frc",
+      "artifactId": "Studica-java",
+      "version": "2025.0.0"
+    }
+  ],
+  "jniDependencies": [
+    {
+      "groupId": "com.studica.frc",
+      "artifactId": "Studica-driver",
+      "version": "2025.0.0",
+      "isJar": false,
+      "skipInvalidPlatforms": true,
+      "validPlatforms": [
+        "linuxathena",
+        "linuxarm32",
+        "linuxarm64",
+        "linuxx86-64",
+        "osxuniversal",
+        "windowsx86-64"
+      ]
+    }
+  ],
+  "cppDependencies": [
+    {
+      "groupId": "com.studica.frc",
+      "artifactId": "Studica-cpp",
+      "version": "2025.0.0",
+      "libName": "Studica",
+      "headerClassifier": "headers",
+      "sharedLibrary": false,
+      "skipInvalidPlatforms": true,
+      "binaryPlatforms": [
+        "linuxathena",
+        "linuxarm32",
+        "linuxarm64",
+        "linuxx86-64",
+        "osxuniversal",
+        "windowsx86-64"
+      ]
+    },
+    {
+      "groupId": "com.studica.frc",
+      "artifactId": "Studica-driver",
+      "version": "2025.0.0",
+      "libName": "StudicaDriver",
+      "headerClassifier": "headers",
+      "sharedLibrary": false,
+      "skipInvalidPlatforms": true,
+      "binaryPlatforms": [
+        "linuxathena",
+        "linuxarm32",
+        "linuxarm64",
+        "linuxx86-64",
+        "osxuniversal",
+        "windowsx86-64"
+      ]
+    }
+  ]
+}
